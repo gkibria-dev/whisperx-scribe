@@ -1,83 +1,111 @@
 # WhisperX Transcription
 
-A reusable Windows PowerShell pipeline for converting an audio recording into a
-time-aligned, speaker-labelled transcript.
+A reusable Windows-based audio transcription project built around WhisperX.
 
-The project is designed so that a new user can clone the repository, complete
-the one-time environment setup, and then process any supported audio file with
-one command.
+The project processes an audio recording into a **time-aligned, speaker-labeled transcript** through a simple PowerShell command.
 
-## What it does
+## What this project does
 
-The pipeline performs four processing stages:
+The pipeline has four stages:
+
+1. **Transcription** — converts speech to text.
+2. **Alignment** — adds word-level timing.
+3. **Speaker diarization** — assigns speaker labels.
+4. **Finalization** — creates a human-readable transcript.
+
+For an input such as:
 
 ```text
-Audio
-  |
-  v
-1. Transcription
-  |
-  +--> *_raw.json
-  |
-  v
-2. Word alignment
-  |
-  +--> *_aligned.json
-  |
-  v
-3. Speaker diarization
-  |
-  +--> *_diarized.json
-  |
-  v
-4. Finalization
-  |
-  +--> *_final.txt
+interview.wav
 ```
 
-The final TXT file is the human-readable transcript. The intermediate JSON files
-preserve information needed by later stages.
+the pipeline creates:
+
+```text
+interview_raw.json
+interview_aligned.json
+interview_diarized.json
+interview_final.txt
+```
+
+The `_final.txt` file is the main human-readable output.
+
+## Project structure
+
+```text
+WhisperX-Transcription/
+│
+├── 01-Environment-Setup/
+│   ├── setup.ps1
+│   ├── 01-check-prerequisites.ps1
+│   ├── 02-create-environment.ps1
+│   ├── 03-install-whisperx.ps1
+│   ├── 04-verify-installation.ps1
+│   └── README.md
+│
+├── 02-Transcription-Pipeline/
+│   ├── run_pipeline.ps1
+│   ├── README.md
+│   └── scripts/
+│       ├── transcribe.py
+│       ├── align_and_merge.py
+│       ├── diarize.py
+│       └── finalize.py
+│
+├── tests/
+├── README-testing.md
+├── requirements.txt
+├── .gitignore
+└── LICENSE
+```
+
+> `.venv` is intentionally not stored in Git. Every computer creates its own environment.
 
 ## Quick start
 
-After the environment has been prepared:
+### New computer
+
+After cloning the repository, open PowerShell at the repository root and run:
 
 ```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 "C:\Recordings\interview.wav"
+.\01-Environment-Setup\setup.ps1
 ```
 
-You do not need to activate the virtual environment manually if the project
-contains `.venv`, `env`, or `whisperx-env` at the repository root.
+This is the **one-time environment setup**.
 
-The script automatically finds the environment.
+The setup process prepares the local Python environment, installs the required packages, checks FFmpeg, configures Hugging Face authentication when required, and verifies WhisperX.
 
-### Hugging Face token
+Then transcribe an audio file:
+
+```powershell
+.\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"
+```
+
+That's the normal workflow. You do **not** need to activate `.venv` manually.
+
+### Existing computer
+
+If the repository's `.venv` is already prepared and WhisperX is working, go directly to:
+
+```powershell
+.\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"
+```
+
+## Hugging Face authentication
 
 Speaker diarization requires a Hugging Face access token.
 
-You have three options:
+During environment setup, if a token is not already configured, `setup.ps1` asks the user for one.
 
-1. Supply it as a parameter:
-
-```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 `
-    "C:\Recordings\interview.wav" `
-    -HFToken "hf_your_token_here"
-```
-
-2. Set `HF_TOKEN` in the environment.
-
-3. Do nothing. If no token is available, the script securely asks for it.
-
-For normal interactive use, option 3 is the simplest:
+You can also provide it explicitly:
 
 ```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 "C:\Recordings\interview.wav"
+.\01-Environment-Setup\setup.ps1 -HFToken "hf_..."
 ```
 
-The token is not written into the repository or generated transcript files.
+Never commit a token to Git.
 
-## Output
+## Output files
 
 For:
 
@@ -85,7 +113,7 @@ For:
 C:\Recordings\interview.wav
 ```
 
-the default output is:
+the pipeline produces files beside the input:
 
 ```text
 C:\Recordings\interview_raw.json
@@ -94,158 +122,37 @@ C:\Recordings\interview_diarized.json
 C:\Recordings\interview_final.txt
 ```
 
-You can change the output directory:
+The intermediate JSON files are useful for troubleshooting and further processing.
 
-```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 `
-    "C:\Recordings\interview.wav" `
-    -OutputDirectory "C:\Recordings\output"
-```
+## Requirements
 
-## Useful options
+The project is intended for Windows PowerShell and requires:
 
-```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 `
-    "C:\Recordings\interview.wav" `
-    -Model medium `
-    -Language en `
-    -Device cpu `
-    -ComputeType int8
-```
+- Python 3.10+
+- FFmpeg
+- Internet access for setup and model downloads
+- A Hugging Face account/token for speaker diarization
 
-If `-Language` is omitted, WhisperX can detect the language.
+Python dependencies are listed in `requirements.txt`.
 
-If the number of speakers is known:
+## Troubleshooting
 
-```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 `
-    "C:\Recordings\interview.wav" `
-    -MinSpeakers 2 `
-    -MaxSpeakers 2
-```
+The pipeline stops when a stage fails.
 
-## Repository structure
+Common issues:
 
-```text
-WhisperX/
-|
-+-- 01-Environment-Setup/
-|   +-- ...
-|
-+-- 02-Transcription-Pipeline/
-|   +-- run_pipeline.ps1
-|   +-- scripts/
-|       +-- transcribe.py
-|       +-- align_and_merge.py
-|       +-- diarize.py
-|       +-- finalize.py
-|
-+-- tests/
-+-- requirements.txt
-+-- .gitignore
-+-- README.md
-```
+- **Python not found** — install Python and make `python` available in PATH.
+- **FFmpeg not found** — install FFmpeg and make it available in PATH.
+- **Hugging Face authentication/model access** — complete the required Hugging Face account/token setup.
+- **First run is slow** — models may need to be downloaded.
+- **CPU inference is slow** — CPU transcription can take substantially longer than GPU inference.
 
-## Environment setup
+## Documentation
 
-Environment setup is a separate, one-time phase.
-
-It installs Python dependencies, FFmpeg requirements, WhisperX, and prepares
-Hugging Face authentication/model access.
-
-Once setup is complete, the normal workflow is simply:
-
-```powershell
-.\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.m4a"
-```
-
-## Pipeline stages
-
-### 1. `transcribe.py`
-
-Converts speech to text and creates:
-
-```text
-*_raw.json
-```
-
-### 2. `align_and_merge.py`
-
-Adds word-level timestamps and creates:
-
-```text
-*_aligned.json
-```
-
-### 3. `diarize.py`
-
-Determines speaker turns and assigns anonymous labels such as:
-
-```text
-SPEAKER_00
-SPEAKER_01
-```
-
-It creates:
-
-```text
-*_diarized.json
-```
-
-### 4. `finalize.py`
-
-Converts the diarized JSON into an easy-to-read transcript:
-
-```text
-*_final.txt
-```
-
-Example:
-
-```text
-[00:00:19 - 00:00:43] SPEAKER_00
-Yeah. All right. Cool. So, yeah, I will just go through with you...
-
-[00:00:43 - 00:02:26] SPEAKER_01
-Okay. So, my experience is on a .NET-based framework...
-```
-
-Speaker numbers are anonymous. The system does not know the real names of the
-people in the recording.
-
-## Why separate scripts?
-
-Each stage has a clear responsibility and produces an intermediate artifact.
-
-This means a later stage can be rerun without repeating earlier, expensive
-processing.
-
-For example, if diarization fails, you do not need to transcribe and align the
-audio again.
-
-## Privacy
-
-Audio recordings and generated transcripts are intended to remain local.
-
-Do not commit private recordings, generated transcripts, model caches, or
-authentication tokens to GitHub.
-
-The included `.gitignore` excludes the common generated/private files.
-
-## Important Windows note
-
-WhisperX uses PyTorch, TorchCodec, FFmpeg, and other native dependencies.
-Compatibility between those components matters.
-
-If you see a TorchCodec/FFmpeg warning, it is separate from Hugging Face
-authentication. A warning is not necessarily the reason the pipeline stopped.
-
-The pipeline reports the actual failing stage and stops when a stage returns a
-non-zero exit code.
+- `01-Environment-Setup/README.md` — environment setup details.
+- `02-Transcription-Pipeline/README.md` — pipeline and script details.
+- `README-testing.md` — automated testing information.
 
 ## License
 
-See `LICENSE` for the license of this project's own code.
-
-WhisperX, Whisper/faster-whisper, PyTorch, pyannote and their model weights have
-their own licenses and terms. Review those separately before redistribution.
+See `LICENSE`.
