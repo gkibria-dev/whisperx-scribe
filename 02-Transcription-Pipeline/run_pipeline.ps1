@@ -1,0 +1,196 @@
+param(
+    [Parameter(Mandatory = $true, Position = 0)]
+    [string]$Audio,
+
+    [string]$Model = "medium",
+    [string]$Language = "",
+    [string]$Device = "cpu",
+    [string]$ComputeType = "int8",
+
+    [Nullable[int]]$MinSpeakers = $null,
+    [Nullable[int]]$MaxSpeakers = $null,
+
+    [string]$OutputDirectory = "",
+
+    # Optional. If omitted, the script uses HF_TOKEN from the environment.
+    # If neither is available, the script securely prompts for the token.
+    [string]$HFToken = ""
+)
+
+$ErrorActionPreference = "Stop"
+
+# Repository root is the parent of 02-Transcription-Pipeline.
+$RepoRoot = Split-Path -Parent $PSScriptRoot
+$Scripts = Join-Path $PSScriptRoot "scripts"
+
+# Prefer .venv, but support existing environments created by earlier versions
+# of this project.
+$EnvironmentCandidates = @(
+    (Join-Path $RepoRoot ".venv"),
+    (Join-Path $RepoRoot "env"),
+    (Join-Path $RepoRoot "whisperx-env")
+)
+
+$Python = $null
+foreach ($EnvironmentPath in $EnvironmentCandidates) {
+    $CandidatePython = Join-Path $EnvironmentPath "Scripts\python.exe"
+    if (Test-Path -LiteralPath $CandidatePython -PathType Leaf) {
+        $Python = $CandidatePython
+        break
+    }
+}
+
+if (-not $Python) {
+    throw @"
+WhisperX virtual environment was not found.
+
+Expected one of:
+  $($EnvironmentCandidates -join "`n  ")
+
+Run the Environment Setup phase first.
+"@
+}
+
+if (-not (Test-Path -LiteralPath $Scripts -PathType Container)) {
+    throw "Pipeline scripts folder not found: $Scripts"
+}
+
+$AudioPath = (Resolve-Path -LiteralPath $Audio -ErrorAction Stop).Path
+$AudioFile = Get-Item -LiteralPath $AudioPath
+
+if ($AudioFile.PSIsContainer) {
+    throw "Audio path points to a directory, not a file: $AudioPath"
+}
+
+if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
+    $OutputDirectory = $AudioFile.DirectoryName
+}
+else {
+    $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
+    New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
+}
+
+# Resolve Hugging Face authentication before starting the expensive
+# diarization stage. The token is kept only in this PowerShell process and
+# passed to child Python processes through HF_TOKEN.
+$PromptedForToken = $false
+
+if (-not [string]::IsNullOrWhiteSpace($HFToken)) {
+    $env:HF_TOKEN = $HFToken
+}
+elseif ([string]::IsNullOrWhiteSpace($env:HF_TOKEN)) {
+    Write-Host ""
+    Write-Host "Speaker diarization requires a Hugging Face access token." -ForegroundColor Yellow
+    Write-Host "Your token will not be displayed while you type it." -ForegroundColor Yellow
+
+    $SecureToken = Read-Host "Enter your Hugging Face token" -AsSecureString
+
+    if (-not $SecureToken) {
+        throw "No Hugging Face token was supplied."
+    }
+
+    $TokenPointer = [Runtime.InteropServices.Marshal]::SecureStringToBSTR($SecureToken)
+
+    try {
+        $env:HF_TOKEN = [Runtime.InteropServices.Marshal]::PtrToStringBSTR($TokenPointer)
+    }
+    finally {
+        [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($TokenPointer)
+    }
+
+    $PromptedForToken = $true
+}
+
+function Invoke-PythonScript {
+    param(
+        [string]$ScriptName,
+        [string[]]$Arguments
+    )
+
+    $ScriptPath = Join-Path $Scripts $ScriptName
+
+    if (-not (Test-Path -LiteralPath $ScriptPath -PathType Leaf)) {
+        throw "Pipeline script not found: $ScriptPath"
+    }
+
+    Write-Host ""
+    Write-Host "=== $ScriptName ===" -ForegroundColor Cyan
+
+    & $Python $ScriptPath @Arguments
+
+    if ($LASTEXITCODE -ne 0) {
+        throw "$ScriptName failed with exit code $LASTEXITCODE."
+    }
+}
+
+$Stem = [System.IO.Path]::GetFileNameWithoutExtension($AudioFile.Name)
+
+$Raw = Join-Path $OutputDirectory "${Stem}_raw.json"
+$Aligned = Join-Path $OutputDirectory "${Stem}_aligned.json"
+$Diarized = Join-Path $OutputDirectory "${Stem}_diarized.json"
+$Final = Join-Path $OutputDirectory "${Stem}_final.txt"
+
+try {
+    Write-Host ""
+    Write-Host "WhisperX Transcription Pipeline" -ForegroundColor Green
+    Write-Host "Audio:       $AudioPath"
+    Write-Host "Environment: $Python"
+    Write-Host "Output:      $OutputDirectory"
+
+    $TranscribeArgs = @(
+        $AudioPath,
+        "--model", $Model,
+        "--device", $Device,
+        "--compute-type", $ComputeType,
+        "--output", $Raw
+    )
+
+    if (-not [string]::IsNullOrWhiteSpace($Language)) {
+        $TranscribeArgs += @("--language", $Language)
+    }
+
+    Invoke-PythonScript "transcribe.py" $TranscribeArgs
+
+    Invoke-PythonScript "align_and_merge.py" @(
+        $AudioPath,
+        $Raw,
+        "--device", $Device,
+        "--output", $Aligned
+    )
+
+    $DiarizeArgs = @(
+        $AudioPath,
+        $Aligned,
+        "--device", $Device,
+        "--output", $Diarized
+    )
+
+    if ($MinSpeakers.HasValue) {
+        $DiarizeArgs += @("--min-speakers", $MinSpeakers.Value)
+    }
+
+    if ($MaxSpeakers.HasValue) {
+        $DiarizeArgs += @("--max-speakers", $MaxSpeakers.Value)
+    }
+
+    Invoke-PythonScript "diarize.py" $DiarizeArgs
+
+    Invoke-PythonScript "finalize.py" @(
+        $Diarized,
+        "--output", $Final
+    )
+
+    Write-Host ""
+    Write-Host "=== Pipeline complete ===" -ForegroundColor Green
+    Write-Host "Raw:       $Raw"
+    Write-Host "Aligned:   $Aligned"
+    Write-Host "Diarized:  $Diarized"
+    Write-Host "Final:     $Final"
+}
+finally {
+    # If the token was entered interactively, do not leave it in the
+    # PowerShell process after the pipeline finishes.
+    if ($PromptedForToken) {
+        Remove-Item Env:HF_TOKEN -ErrorAction SilentlyContinue
+    }
+}

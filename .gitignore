@@ -1,0 +1,56 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyd
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv/
+venv/
+env/
+
+# Secrets / local configuration
+.env
+.env.*
+!.env.example
+
+# Hugging Face / model caches
+.hf-cache/
+.huggingface/
+hf-cache/
+huggingface/
+**/.cache/
+**/models--*/
+
+# Local audio/video recordings
+*.wav
+*.mp3
+*.m4a
+*.mp4
+*.flac
+*.aac
+*.ogg
+*.opus
+*.webm
+
+# Generated WhisperX artifacts
+*_raw.json
+*_aligned.json
+*_diarized.json
+*_final.txt
+
+# Local test/output directories
+/test/
+/output/
+/outputs/
+
+# Logs
+*.log
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/

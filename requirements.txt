@@ -1,0 +1,6 @@
+# Core application
+whisperx==3.8.6
+
+# WhisperX 3.8.6 commonly installs PyTorch 2.8.x.
+# Pin TorchCodec to the compatible 2.8 generation.
+torchcodec==0.7.0
