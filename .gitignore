@@ -34,6 +34,8 @@ huggingface/
 *.ogg
 *.opus
 *.webm
+!tests/data/sample-2-speakers.wav
+
 
 # Generated WhisperX artifacts
 *_raw.json
