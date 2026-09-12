@@ -10,7 +10,16 @@ Use:
 .\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"
 ```
 
-You do not need to activate `.venv` manually. The PowerShell runner locates the repository's virtual environment.
+You do not need to activate the environment manually. The PowerShell runner uses the
+environment configured in `settings.json` (`environment.venvPath`), which lives outside the
+repository.
+
+If that environment does not exist, the runner stops and tells you to run
+`01-Environment-Setup\setup.ps1`. It does not fall back to an environment inside the
+repository — keeping the Python runtime out of version control is deliberate.
+
+Model, device, compute type, language and speaker-count defaults also come from
+`settings.json`. Any argument passed on the command line overrides them.
 
 ## Pipeline
 
@@ -105,6 +114,10 @@ C:\Recordings\interview_aligned.json
 C:\Recordings\interview_diarized.json
 C:\Recordings\interview_final.txt
 ```
+
+Outputs land beside the source audio by default. Set `output.mode` to `directory` in
+`settings.json` to collect them in one configured folder instead, or pass `-OutputDirectory`
+to redirect a single run.
 
 ## Scripts
 

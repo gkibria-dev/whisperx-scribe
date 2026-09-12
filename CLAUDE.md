@@ -13,29 +13,36 @@ time-aligned, speaker-labeled transcript comes out. Two phases, each a numbered 
 All commands run from the repository root.
 
 ```powershell
-# One-time environment setup (creates .venv, installs deps, checks FFmpeg, configures HF_TOKEN)
+# One-time setup (creates the EXTERNAL venv, installs deps, checks FFmpeg, configures HF_TOKEN)
 .\01-Environment-Setup\setup.ps1
-.\01-Environment-Setup\setup.ps1 -HFToken "hf_..."      # non-interactive token
-.\01-Environment-Setup\setup.ps1 -SkipHuggingFaceToken  # skip the token step
+.\01-Environment-Setup\setup.ps1 -HFToken "hf_..."              # non-interactive token
+.\01-Environment-Setup\setup.ps1 -SkipHuggingFaceToken          # skip the token step
+.\01-Environment-Setup\setup.ps1 -EnvironmentPath "E:\envs\wx"  # override the configured path
 
 # Run the pipeline
 .\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"
 .\02-Transcription-Pipeline\run_pipeline.ps1 "audio.wav" -Model medium -Device cpu -ComputeType int8 `
     -Language en -MinSpeakers 2 -MaxSpeakers 2 -OutputDirectory ".\out"
 
-# Tests (there are exactly two; both are PowerShell scripts, not pytest)
+# Tests (there are exactly three; all PowerShell scripts, not pytest)
+.\tests\test-settings.ps1               # settings layering + git hygiene; seconds, offline
 .\tests\test-clean-install.ps1          # fresh-clone setup test in a temp repo copy
 .\tests\test-clean-install.ps1 -KeepTemp
 .\tests\test-pipeline.ps1               # end-to-end run against tests\data\sample-2-speakers.wav
 .\tests\test-pipeline.ps1 -KeepOutput
 
 # Run one pipeline stage directly (debugging; normally use run_pipeline.ps1)
-.\.venv\Scripts\python.exe .\02-Transcription-Pipeline\scripts\transcribe.py audio.wav --output audio_raw.json
+& "$env:LOCALAPPDATA\WhisperX-Transcription\venv\Scripts\python.exe" `
+    .\02-Transcription-Pipeline\scripts\transcribe.py audio.wav --output audio_raw.json
+
+# Inspect resolved configuration
+. .\settings.ps1; Get-ProjectSettings -RepositoryRoot (Get-Location).Path
 ```
 
-There is no linter, formatter, or test framework configured. `test-pipeline.ps1` is the
-smallest meaningful check after touching pipeline code; it runs the real
-`run_pipeline.ps1`, so on CPU it takes minutes and downloads models on first run.
+There is no linter, formatter, or test framework configured. `test-settings.ps1` is the fast
+check to run after touching configuration — it needs no environment and finishes in seconds.
+`test-pipeline.ps1` is the smallest meaningful check after touching pipeline code; it runs the
+real `run_pipeline.ps1`, so on CPU it takes minutes and downloads models on first run.
 
 ## Architecture
 
@@ -65,9 +72,28 @@ Consequences worth knowing before changing things:
 - Every script's `--output` defaults are derived from the input filename suffix, so renaming
   the `_raw` / `_aligned` / `_diarized` conventions touches several files.
 
-**Environment discovery.** `run_pipeline.ps1` looks for `Scripts\python.exe` under `.venv`,
-then `env`, then `whisperx-env` at the repo root. Nothing activates the venv; the interpreter
-is invoked by absolute path. `.venv` is never committed — each machine builds its own.
+**Configuration.** `settings.json` at the repo root is the single source for paths and
+pipeline defaults; `settings.local.json` (gitignored) shallow-merges over it per section.
+`settings.ps1` is the shared loader every PowerShell script dot-sources — `Get-ProjectSettings`,
+`Resolve-ConfiguredPath` (expands `%VAR%`, resolves relatives against the repo root), and
+`Get-VenvPython`. Built-in defaults in `Get-DefaultProjectSettings` mirror `settings.json`
+exactly, so a missing or partial settings file still works. Never put `HF_TOKEN` in either
+file. Layering is defaults → `settings.json` → `settings.local.json` → command-line argument.
+
+**Environment discovery — there is none, by design.** The venv lives *outside* the repo at
+`environment.venvPath` (default `%LOCALAPPDATA%\WhisperX-Transcription\venv`). `run_pipeline.ps1`
+resolves that one path and throws if it is absent; it does **not** probe for `.venv`, `env` or
+`whisperx-env` in the repo. If you are tempted to add a fallback, don't — separating the 2.3 GB
+runtime from a Google-Drive-synced repo is the whole point. `Get-LegacyEnvironmentPaths` exists
+only so `setup.ps1` can advise about an orphaned in-repo environment; it must never gate
+execution. Nothing activates the venv; the interpreter is invoked by absolute path.
+
+**Generated files never land in the repo.** `test-pipeline.ps1` writes to a per-run folder
+under `test.outputDirectory` and deletes it on success (kept on failure, or with `-KeepOutput`).
+`test-clean-install.ps1` builds its own venv under `test.environmentPath`, passed explicitly as
+`-EnvironmentPath` to the copied setup, and excludes `settings.local.json` from the copy — both
+guards exist so the test cannot touch the real environment. `git status` should be clean after
+either test.
 
 **Hugging Face token.** Diarization needs it. Resolution order in `diarize.py`: `--hf-token`,
 then `HF_TOKEN` env var, then an interactive `getpass` prompt (skipped when stdin is not a
@@ -107,4 +133,24 @@ install roots.
 - Tests call the real production entry points rather than reimplementing them — that is the
   stated test philosophy. Keep it when adding tests.
 - Docs live in Markdown next to what they describe: root `README.md`, one `README.md` per
-  phase directory, `README-testing.md` for tests.
+  phase directory, `README-testing.md` for tests, and `docs/plans/` for plans.
+- Any script needing a path dot-sources `settings.ps1` and resolves it through
+  `Resolve-ConfiguredPath`. Do not reintroduce a hard-coded environment or output path.
+
+## Plans
+
+**Every design, refactor or implementation plan for this repository is written to
+`docs/plans/<kebab-case-name>.md`.** This is the default — do not ask where to put a plan, and
+do not put one at the repository root or anywhere else under `docs/`. The `docs/` root is
+reserved for Diátaxis document types (tutorial, how-to, explanation, reference); a plan is not
+one of those, which is why it gets its own subdirectory.
+
+A session's own plan file (under `~/.claude/plans/`) is scratch. It does not count as
+delivering the plan: when a plan is agreed, write it into `docs/plans/` so it is versioned with
+the code it describes and readable without the conversation that produced it.
+
+Each plan document is self-contained and states, at minimum: a status line, the current state
+and the problem, the target state, the decisions with their rationale, ordered implementation
+steps, and validation criteria. Keep the status line current — mark it implemented, and record
+what was actually verified, when the work lands. See
+`docs/plans/runtime-separation-refactor-plan.md` for the shape to follow.

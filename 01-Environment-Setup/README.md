@@ -20,7 +20,7 @@ The setup entry point automates the environment preparation:
 
 1. Checks Python.
 2. Checks FFmpeg and attempts automatic installation when supported.
-3. Creates the repository-local `.venv`.
+3. Creates the virtual environment at the configured external location.
 4. Installs dependencies from `requirements.txt`.
 5. Configures the Hugging Face token when required.
 6. Verifies WhisperX and its diarization API.
@@ -62,13 +62,32 @@ The individual scripts remain useful for maintenance and troubleshooting.
 
 ## Virtual environment
 
-The environment is created at:
+The environment is created **outside the repository**, at the path configured in
+`settings.json`:
 
 ```text
-<repository-root>\.venv
+%LOCALAPPDATA%\WhisperX-Transcription\venv
 ```
 
-It is intentionally excluded from Git.
+Keeping it outside means a multi-gigabyte runtime never enters version control or a synced
+folder, and re-cloning the repository does not mean rebuilding it.
+
+Override the location for a single run:
+
+```powershell
+.\01-Environment-Setup\setup.ps1 -EnvironmentPath "E:\ml-envs\whisperx"
+```
+
+Or permanently for this machine, in `settings.local.json`:
+
+```json
+{
+  "environment": { "venvPath": "E:\\ml-envs\\whisperx" }
+}
+```
+
+If an old `.venv`, `env` or `whisperx-env` still exists inside the repository, setup reports
+it. Nothing uses it any more, and it is safe to delete once the new environment works.
 
 ## After setup
 

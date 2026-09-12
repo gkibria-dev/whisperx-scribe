@@ -64,6 +64,9 @@ $ErrorActionPreference = "Stop"
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $PipelineScript = Join-Path $RepositoryRoot "02-Transcription-Pipeline\run_pipeline.ps1"
 
+. (Join-Path $RepositoryRoot "settings.ps1")
+$Settings = Get-ProjectSettings -RepositoryRoot $RepositoryRoot
+
 if (-not (Test-Path -LiteralPath $PipelineScript -PathType Leaf)) {
     throw "Pipeline script not found: $PipelineScript"
 }
@@ -85,26 +88,40 @@ if (-not (Test-Path -LiteralPath $expectedPath -PathType Leaf)) {
     throw "Expected transcript file not found: $expectedPath"
 }
 
+$stem = [System.IO.Path]::GetFileNameWithoutExtension($AudioFile.Name)
+
+# Generated test artifacts never go inside the repository. Each run gets its own
+# folder under the configured external test output directory, so runs cannot
+# collide and cleanup can remove the whole folder safely.
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    # Keep test output beside the source audio, exactly as the production
-    # pipeline does when no output directory is supplied.
-    $OutputDirectory = $AudioFile.DirectoryName
+    $TestOutputRoot = Resolve-ConfiguredPath `
+        -Path $Settings.test.outputDirectory `
+        -RepositoryRoot $RepositoryRoot
+
+    $OutputDirectory = Join-Path $TestOutputRoot ("{0}-{1}" -f $stem, (Get-Date -Format "yyyyMMdd-HHmmss"))
 }
 else {
     $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
-    New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 }
 
-$RemoveOutput = $false
+New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 
-$stem = [System.IO.Path]::GetFileNameWithoutExtension($AudioFile.Name)
+$KeepOutputRequested = $KeepOutput.IsPresent
+
+if (-not $KeepOutputRequested -and $Settings.test.keepOutput) {
+    $KeepOutputRequested = $true
+}
 
 $raw = Join-Path $OutputDirectory "${stem}_raw.json"
 $aligned = Join-Path $OutputDirectory "${stem}_aligned.json"
 $diarized = Join-Path $OutputDirectory "${stem}_diarized.json"
 $final = Join-Path $OutputDirectory "${stem}_final.txt"
 
-$python = Join-Path $RepositoryRoot ".venv\Scripts\python.exe"
+$environmentPath = Resolve-ConfiguredPath `
+    -Path $Settings.environment.venvPath `
+    -RepositoryRoot $RepositoryRoot
+
+$python = Get-VenvPython -EnvironmentPath $environmentPath
 
 Write-Host "=== WhisperX pipeline integration test ===" -ForegroundColor Cyan
 Write-Host "Repository: $RepositoryRoot"
@@ -112,7 +129,7 @@ Write-Host "Audio:      $AudioPath"
 Write-Host "Output:     $OutputDirectory"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
-    throw "Virtual environment not found at $python. Run .\01-Environment-Setup\setup.ps1 first."
+    throw "WhisperX environment not found at $environmentPath. Run .\01-Environment-Setup\setup.ps1 first."
 }
 
 Write-Host ""
@@ -213,6 +230,10 @@ try {
     Write-Host "==============================================" -ForegroundColor Green
 }
 catch {
+    # Keep the artifacts of a failed run - they are the evidence needed to
+    # diagnose it, and re-running costs several minutes of CPU inference.
+    $KeepOutputRequested = $true
+
     Write-Host ""
     Write-Host "==============================================" -ForegroundColor Red
     Write-Host "PIPELINE TEST FAILED" -ForegroundColor Red
@@ -221,7 +242,11 @@ catch {
     throw
 }
 finally {
-    # By default, integration-test artifacts remain beside the source audio so
-    # they can be inspected after the test.
-    # KeepOutput is retained for compatibility with earlier versions.
+    if ($KeepOutputRequested) {
+        Write-Host ""
+        Write-Host "Test output retained: $OutputDirectory" -ForegroundColor Yellow
+    }
+    elseif (Test-Path -LiteralPath $OutputDirectory -PathType Container) {
+        Remove-Item -LiteralPath $OutputDirectory -Recurse -Force -ErrorAction SilentlyContinue
+    }
 }

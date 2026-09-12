@@ -1,10 +1,23 @@
+param(
+    [string]$EnvironmentPath = ""
+)
+
 $ErrorActionPreference = "Stop"
 $ProjectRoot = Split-Path -Parent $PSScriptRoot
 Set-Location $ProjectRoot
 
-$Python = Join-Path $ProjectRoot ".venv\Scripts\python.exe"
-if (-not (Test-Path $Python)) {
-    throw "Virtual environment not found. Run 02-create-environment.ps1 first."
+. (Join-Path $ProjectRoot "settings.ps1")
+$Settings = Get-ProjectSettings -RepositoryRoot $ProjectRoot
+
+if ([string]::IsNullOrWhiteSpace($EnvironmentPath)) {
+    $EnvironmentPath = $Settings.environment.venvPath
+}
+
+$VenvPath = Resolve-ConfiguredPath -Path $EnvironmentPath -RepositoryRoot $ProjectRoot
+$Python = Get-VenvPython -EnvironmentPath $VenvPath
+
+if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
+    throw "Virtual environment not found at $VenvPath. Run 02-create-environment.ps1 first."
 }
 
 Write-Host "=== Verifying WhisperX installation ===" -ForegroundColor Cyan

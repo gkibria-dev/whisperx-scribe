@@ -6,8 +6,9 @@
     Creates an isolated temporary copy of the repository and runs the public
     Phase 1 setup.ps1 entry point.
 
-    The test intentionally does not use the repository's existing .venv.
-    This simulates the important "fresh clone -> setup" scenario.
+    The test builds its own throwaway environment under test.environmentPath and
+    never touches the environment used for normal work. This simulates the
+    important "fresh clone -> setup" scenario.
 
     The setup script is responsible for handling FFmpeg installation/verification,
     so this test does not require FFmpeg to already be on PATH.
@@ -39,8 +40,13 @@ $ErrorActionPreference = "Stop"
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
 $SetupScript = Join-Path $RepositoryRoot "01-Environment-Setup\setup.ps1"
 
+. (Join-Path $RepositoryRoot "settings.ps1")
+$Settings = Get-ProjectSettings -RepositoryRoot $RepositoryRoot
+
 $requiredFiles = @(
     "requirements.txt",
+    "settings.json",
+    "settings.ps1",
     "01-Environment-Setup\setup.ps1",
     "02-Transcription-Pipeline\run_pipeline.ps1",
     "02-Transcription-Pipeline\scripts\transcribe.py",
@@ -66,19 +72,67 @@ if (-not $python) {
 
 Write-Host "Python: $(& $PythonCommand --version 2>&1)"
 
-$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
-    ("WhisperX-clean-install-" + [Guid]::NewGuid().ToString("N"))
+$testId = [Guid]::NewGuid().ToString("N")
+
+$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("WhisperX-clean-install-" + $testId)
+
+# The test builds its own throwaway environment. It must never touch the
+# developer's real one, which the copied setup.ps1 would otherwise resolve from
+# the copied settings.json.
+$testEnvironmentRoot = Resolve-ConfiguredPath `
+    -Path $Settings.test.environmentPath `
+    -RepositoryRoot $RepositoryRoot
+
+$testEnvironment = Join-Path $testEnvironmentRoot $testId
+
+$productionEnvironment = Resolve-ConfiguredPath `
+    -Path $Settings.environment.venvPath `
+    -RepositoryRoot $RepositoryRoot
+
+function Test-PathOverlap {
+    # True when the two paths are the same, or one contains the other.
+    param(
+        [Parameter(Mandatory)][string]$First,
+        [Parameter(Mandatory)][string]$Second
+    )
+
+    $a = $First.TrimEnd('\') + '\'
+    $b = $Second.TrimEnd('\') + '\'
+
+    return $a.StartsWith($b, [StringComparison]::OrdinalIgnoreCase) -or
+           $b.StartsWith($a, [StringComparison]::OrdinalIgnoreCase)
+}
+
+# Compare the configured roots, not the per-run folder: a per-run folder nested
+# inside the normal environment would still be building into it.
+if (Test-PathOverlap -First $testEnvironmentRoot -Second $productionEnvironment) {
+    throw @"
+Clean-install test aborted: the isolated test environment would be created
+inside, or on top of, the environment used for normal work.
+
+    test.environmentPath   $testEnvironmentRoot
+    environment.venvPath   $productionEnvironment
+
+Set test.environmentPath in settings.json to a location that does not overlap
+environment.venvPath.
+"@
+}
 
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
-Write-Host "Temporary test directory: $testRoot"
+Write-Host "Temporary test directory:   $testRoot"
+Write-Host "Isolated test environment:  $testEnvironment"
 
 try {
-    # Exclude generated/local environments and repository metadata.
+    # Exclude repository metadata, any environment left inside the repository by
+    # an earlier version, and the developer's local settings override - the
+    # override would otherwise follow the copy and redirect this test at their
+    # real environment.
     $null = robocopy `
         $RepositoryRoot `
         $testRoot `
         /E `
         /XD ".git" ".venv" "env" `
+        /XF "settings.local.json" `
         /NFL /NDL /NJH /NJS /NP
 
     if ($LASTEXITCODE -gt 7) {
@@ -92,20 +146,24 @@ try {
 
     # Use Bypass only for the child test process so a downloaded/cloned script
     # is not blocked by the host's RemoteSigned policy.
+    # -EnvironmentPath is what keeps this test off the developer's real
+    # environment. Without it the copied setup would resolve the shared path
+    # from the copied settings.json.
     & powershell.exe `
         -NoProfile `
         -ExecutionPolicy Bypass `
         -File $testSetupScript `
-        -PythonCommand $PythonCommand
+        -PythonCommand $PythonCommand `
+        -EnvironmentPath $testEnvironment
 
     if ($LASTEXITCODE -ne 0) {
         throw "setup.ps1 failed with exit code $LASTEXITCODE."
     }
 
-    $venvPython = Join-Path $testRoot ".venv\Scripts\python.exe"
+    $venvPython = Get-VenvPython -EnvironmentPath $testEnvironment
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
-        throw "Clean-install test failed: .venv Python was not created."
+        throw "Clean-install test failed: no Python was created at $testEnvironment."
     }
 
     Write-Host ""
@@ -129,11 +187,20 @@ catch {
     Write-Host "CLEAN-INSTALL TEST FAILED" -ForegroundColor Red
     Write-Host $_.Exception.Message -ForegroundColor Red
     Write-Host "==============================================" -ForegroundColor Red
+    # Retain the evidence. Previously this message was printed but the finally
+    # block deleted the directory anyway.
+    $KeepTemp = $true
+
     Write-Host "Temporary test directory retained for diagnosis: $testRoot" -ForegroundColor Yellow
+    Write-Host "Isolated test environment retained for diagnosis: $testEnvironment" -ForegroundColor Yellow
     throw
 }
 finally {
-    if (-not $KeepTemp -and (Test-Path -LiteralPath $testRoot)) {
-        Remove-Item -LiteralPath $testRoot -Recurse -Force -ErrorAction SilentlyContinue
+    if (-not $KeepTemp) {
+        foreach ($path in @($testRoot, $testEnvironment)) {
+            if (Test-Path -LiteralPath $path) {
+                Remove-Item -LiteralPath $path -Recurse -Force -ErrorAction SilentlyContinue
+            }
+        }
     }
 }

@@ -2,8 +2,10 @@
 # Run from the repository root:
 #   .\01-Environment-Setup\setup.ps1
 #
-# Creates the Python virtual environment inside the repository.
-# No developer-specific absolute paths are used.
+# Creates the Python virtual environment OUTSIDE the repository, at the location
+# configured in settings.json (environment.venvPath), so that a multi-gigabyte
+# runtime never lives inside version control or a synced folder.
+# No developer-specific absolute paths are hard-coded.
 #
 # FFmpeg handling:
 #   - Uses ffmpeg.exe if it is already available on PATH.
@@ -23,10 +25,11 @@
 
 [CmdletBinding()]
 param(
-    [string]$PythonCommand = "python",
-    [string]$EnvironmentName = ".venv",
+    [string]$PythonCommand = "",
+    [string]$EnvironmentPath = "",
     [string]$RequirementsFile = "",
-    [switch]$SkipHuggingFaceToken
+    [switch]$SkipHuggingFaceToken,
+    [string]$HFToken = ""
 )
 
 $ErrorActionPreference = "Stop"
@@ -34,12 +37,23 @@ $ErrorActionPreference = "Stop"
 $ScriptDirectory = Split-Path -Parent $MyInvocation.MyCommand.Path
 $RepoRoot = Split-Path -Parent $ScriptDirectory
 
+. (Join-Path $RepoRoot "settings.ps1")
+$Settings = Get-ProjectSettings -RepositoryRoot $RepoRoot
+
+if ([string]::IsNullOrWhiteSpace($PythonCommand)) {
+    $PythonCommand = $Settings.environment.pythonCommand
+}
+
 if ([string]::IsNullOrWhiteSpace($RequirementsFile)) {
     $RequirementsFile = Join-Path $RepoRoot "requirements.txt"
 }
 
-$VenvPath = Join-Path $RepoRoot $EnvironmentName
-$PythonExe = Join-Path $VenvPath "Scripts\python.exe"
+if ([string]::IsNullOrWhiteSpace($EnvironmentPath)) {
+    $EnvironmentPath = $Settings.environment.venvPath
+}
+
+$VenvPath = Resolve-ConfiguredPath -Path $EnvironmentPath -RepositoryRoot $RepoRoot
+$PythonExe = Get-VenvPython -EnvironmentPath $VenvPath
 
 function Test-CommandExists {
     param([Parameter(Mandatory)][string]$CommandName)
@@ -241,9 +255,19 @@ Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host " WhisperX Transcription - Environment Setup" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host "Repository: $RepoRoot"
+Write-Host "Repository:  $RepoRoot"
 Write-Host "Environment: $VenvPath"
 Write-Host ""
+
+# Advisory only. Nothing in this project falls back to these locations; this
+# simply stops an orphaned multi-gigabyte folder from sitting unnoticed in the
+# repository after the move to an external environment.
+foreach ($LegacyEnvironment in (Get-LegacyEnvironmentPaths -RepositoryRoot $RepoRoot)) {
+    Write-Host "Note: an unused environment remains inside the repository:" -ForegroundColor DarkYellow
+    Write-Host "      $LegacyEnvironment" -ForegroundColor DarkYellow
+    Write-Host "      Nothing uses it any more. You can delete it once this setup succeeds." -ForegroundColor DarkYellow
+    Write-Host ""
+}
 
 # [1/6] Python
 Write-Host "[1/6] Checking Python..." -ForegroundColor Yellow
@@ -281,6 +305,15 @@ if (Test-Path -LiteralPath $PythonExe -PathType Leaf) {
     Write-Host "      Existing environment found." -ForegroundColor Green
 }
 else {
+    # The environment lives outside the repository, so its parent directory is
+    # not guaranteed to exist yet.
+    $VenvParent = Split-Path -Parent $VenvPath
+
+    if (-not [string]::IsNullOrWhiteSpace($VenvParent) -and
+        -not (Test-Path -LiteralPath $VenvParent -PathType Container)) {
+        New-Item -ItemType Directory -Force -Path $VenvParent | Out-Null
+    }
+
     & $PythonCommand -m venv $VenvPath
 
     if ($LASTEXITCODE -ne 0 -or -not (Test-Path -LiteralPath $PythonExe -PathType Leaf)) {
@@ -318,6 +351,14 @@ Write-Host "[5/6] Checking Hugging Face authentication..." -ForegroundColor Yell
 
 if ($SkipHuggingFaceToken) {
     Write-Host "      Hugging Face token check skipped." -ForegroundColor DarkYellow
+}
+elseif (-not [string]::IsNullOrWhiteSpace($HFToken)) {
+    # Supplied explicitly for non-interactive setup. Persisted the same way an
+    # interactively entered token is, and never echoed.
+    $env:HF_TOKEN = $HFToken.Trim()
+    [Environment]::SetEnvironmentVariable("HF_TOKEN", $env:HF_TOKEN, "User")
+
+    Write-Host "      HF_TOKEN configured for the current user." -ForegroundColor Green
 }
 else {
     $hfToken = $env:HF_TOKEN

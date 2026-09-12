@@ -2,10 +2,11 @@ param(
     [Parameter(Mandatory = $true, Position = 0)]
     [string]$Audio,
 
-    [string]$Model = "medium",
+    # Empty values fall back to the pipeline defaults in settings.json.
+    [string]$Model = "",
     [string]$Language = "",
-    [string]$Device = "cpu",
-    [string]$ComputeType = "int8",
+    [string]$Device = "",
+    [string]$ComputeType = "",
 
     [Nullable[int]]$MinSpeakers = $null,
     [Nullable[int]]$MaxSpeakers = $null,
@@ -23,31 +24,42 @@ $ErrorActionPreference = "Stop"
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Scripts = Join-Path $PSScriptRoot "scripts"
 
-# Prefer .venv, but support existing environments created by earlier versions
-# of this project.
-$EnvironmentCandidates = @(
-    (Join-Path $RepoRoot ".venv"),
-    (Join-Path $RepoRoot "env"),
-    (Join-Path $RepoRoot "whisperx-env")
-)
+. (Join-Path $RepoRoot "settings.ps1")
+$Settings = Get-ProjectSettings -RepositoryRoot $RepoRoot
 
-$Python = $null
-foreach ($EnvironmentPath in $EnvironmentCandidates) {
-    $CandidatePython = Join-Path $EnvironmentPath "Scripts\python.exe"
-    if (Test-Path -LiteralPath $CandidatePython -PathType Leaf) {
-        $Python = $CandidatePython
-        break
-    }
+# Unset parameters take their defaults from settings.json; an explicitly passed
+# argument always wins.
+if ([string]::IsNullOrWhiteSpace($Model)) { $Model = $Settings.pipeline.model }
+if ([string]::IsNullOrWhiteSpace($Device)) { $Device = $Settings.pipeline.device }
+if ([string]::IsNullOrWhiteSpace($ComputeType)) { $ComputeType = $Settings.pipeline.computeType }
+if ([string]::IsNullOrWhiteSpace($Language)) { $Language = [string]$Settings.pipeline.language }
+
+if (-not $MinSpeakers.HasValue -and $null -ne $Settings.pipeline.minSpeakers) {
+    $MinSpeakers = [int]$Settings.pipeline.minSpeakers
 }
 
-if (-not $Python) {
+if (-not $MaxSpeakers.HasValue -and $null -ne $Settings.pipeline.maxSpeakers) {
+    $MaxSpeakers = [int]$Settings.pipeline.maxSpeakers
+}
+
+# The configured external environment is the only one used. There is
+# deliberately no fallback to a repository-local .venv - keeping the Python
+# runtime out of the repository is the point of this layout.
+$EnvironmentPath = Resolve-ConfiguredPath -Path $Settings.environment.venvPath -RepositoryRoot $RepoRoot
+$Python = Get-VenvPython -EnvironmentPath $EnvironmentPath
+
+if (-not (Test-Path -LiteralPath $Python -PathType Leaf)) {
     throw @"
-WhisperX virtual environment was not found.
+WhisperX environment was not found.
 
-Expected one of:
-  $($EnvironmentCandidates -join "`n  ")
+Expected: $EnvironmentPath
 
-Run the Environment Setup phase first.
+Run the environment setup first:
+    .\01-Environment-Setup\setup.ps1
+
+The Python environment is intentionally stored outside the repository.
+Its location is configured in settings.json (environment.venvPath) and can
+be overridden per machine in settings.local.json.
 "@
 }
 
@@ -62,13 +74,22 @@ if ($AudioFile.PSIsContainer) {
     throw "Audio path points to a directory, not a file: $AudioPath"
 }
 
+# Output resolution: an explicit -OutputDirectory wins; otherwise the configured
+# output mode decides. The default mode is "beside-audio", which writes the
+# transcripts next to the source recording exactly as this pipeline always has.
 if ([string]::IsNullOrWhiteSpace($OutputDirectory)) {
-    $OutputDirectory = $AudioFile.DirectoryName
+    if ($Settings.output.mode -eq "directory") {
+        $OutputDirectory = Resolve-ConfiguredPath -Path $Settings.output.directory -RepositoryRoot $RepoRoot
+    }
+    else {
+        $OutputDirectory = $AudioFile.DirectoryName
+    }
 }
 else {
     $OutputDirectory = [System.IO.Path]::GetFullPath($OutputDirectory)
-    New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 }
+
+New-Item -ItemType Directory -Force -Path $OutputDirectory | Out-Null
 
 # Resolve Hugging Face authentication before starting the expensive
 # diarization stage. The token is kept only in this PowerShell process and

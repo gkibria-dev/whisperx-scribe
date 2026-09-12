@@ -1,0 +1,23 @@
+{
+  "environment": {
+    "venvPath": "%LOCALAPPDATA%\\WhisperX-Transcription\\venv",
+    "pythonCommand": "python"
+  },
+  "pipeline": {
+    "model": "medium",
+    "device": "cpu",
+    "computeType": "int8",
+    "language": "",
+    "minSpeakers": null,
+    "maxSpeakers": null
+  },
+  "output": {
+    "mode": "beside-audio",
+    "directory": "%LOCALAPPDATA%\\WhisperX-Transcription\\output"
+  },
+  "test": {
+    "outputDirectory": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-output",
+    "environmentPath": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-venv",
+    "keepOutput": false
+  }
+}

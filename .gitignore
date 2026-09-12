@@ -6,10 +6,17 @@ __pycache__/
 .mypy_cache/
 .ruff_cache/
 
+# Local settings override (machine-specific paths; never commit)
+settings.local.json
+
 # Virtual environments
+# The environment now lives outside the repository, at the location configured
+# in settings.json. These entries remain as a guard against an environment
+# created here by an older version of the project.
 .venv/
 venv/
 env/
+whisperx-env/
 
 # Secrets / local configuration
 .env
