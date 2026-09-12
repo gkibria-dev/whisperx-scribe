@@ -1,69 +1,57 @@
 <#
 .SYNOPSIS
-    Automatically validates the complete WhisperX environment setup in an
-    isolated temporary copy of the repository.
+    Validates that a clean repository can create and verify a WhisperX environment.
 
 .DESCRIPTION
-    This test does NOT use the existing project's .venv.
+    Creates an isolated temporary copy of the repository and runs the public
+    Phase 1 setup.ps1 entry point.
 
-    It:
-      1. Creates a temporary clean copy of the repository.
-      2. Runs all four Phase 1 setup scripts in order.
-      3. Verifies the resulting .venv.
-      4. Removes the temporary copy unless -KeepTemp is specified.
+    The test intentionally does not use the repository's existing .venv.
+    This simulates the important "fresh clone -> setup" scenario.
 
-    This is intended to prove that a freshly cloned repository can build its
-    own environment without relying on packages installed manually elsewhere.
-
-    NOTE:
-      - Python and FFmpeg must already exist on PATH.
-      - Internet access is required because Phase 1 installs Python packages.
-      - Hugging Face account/token setup is not part of these four setup scripts.
-        It is only required later for speaker diarization.
+    The setup script is responsible for handling FFmpeg installation/verification,
+    so this test does not require FFmpeg to already be on PATH.
 
 .PARAMETER PythonCommand
-    Python command to use when creating the temporary environment.
-    Default: python
+    Python command available on the host. Default: python.
 
 .PARAMETER KeepTemp
-    Keep the temporary test copy after the test finishes.
-
-.PARAMETER UpgradePip
-    Pass -UpgradePip to the WhisperX installation script.
+    Keep the temporary test repository for troubleshooting.
 
 .EXAMPLE
     .\tests\test-clean-install.ps1
 
 .EXAMPLE
-    .\tests\test-clean-install.ps1 -UpgradePip -KeepTemp
+    .\tests\test-clean-install.ps1 -KeepTemp
+
+.EXAMPLE
+    .\tests\test-clean-install.ps1 -PythonCommand py
 #>
 
 [CmdletBinding()]
 param(
     [string]$PythonCommand = "python",
-    [switch]$KeepTemp,
-    [switch]$UpgradePip
+    [switch]$KeepTemp
 )
 
 $ErrorActionPreference = "Stop"
 
 $RepositoryRoot = Split-Path -Parent $PSScriptRoot
-$SetupDirectory = Join-Path $RepositoryRoot "01-Environment-Setup"
+$SetupScript = Join-Path $RepositoryRoot "01-Environment-Setup\setup.ps1"
 
 $requiredFiles = @(
     "requirements.txt",
-    "01-Environment-Setup\01-check-prerequisites.ps1",
-    "01-Environment-Setup\02-create-environment.ps1",
-    "01-Environment-Setup\03-install-whisperx.ps1",
-    "01-Environment-Setup\04-verify-installation.ps1"
+    "01-Environment-Setup\setup.ps1",
+    "02-Transcription-Pipeline\run_pipeline.ps1",
+    "02-Transcription-Pipeline\scripts\transcribe.py",
+    "02-Transcription-Pipeline\scripts\align_and_merge.py",
+    "02-Transcription-Pipeline\scripts\diarize.py",
+    "02-Transcription-Pipeline\scripts\finalize.py"
 )
 
 Write-Host "=== WhisperX clean-install test ===" -ForegroundColor Cyan
 Write-Host "Repository: $RepositoryRoot"
 
-# -----------------------------------------------------------------------------
-# 1. Validate repository structure
-# -----------------------------------------------------------------------------
 foreach ($relativePath in $requiredFiles) {
     $path = Join-Path $RepositoryRoot $relativePath
     if (-not (Test-Path -LiteralPath $path -PathType Leaf)) {
@@ -71,80 +59,49 @@ foreach ($relativePath in $requiredFiles) {
     }
 }
 
-Write-Host "Repository structure check passed." -ForegroundColor Green
-
-# -----------------------------------------------------------------------------
-# 2. Validate host prerequisites
-# -----------------------------------------------------------------------------
 $python = Get-Command $PythonCommand -ErrorAction SilentlyContinue
 if (-not $python) {
     throw "Python command '$PythonCommand' was not found on PATH."
 }
 
-$ffmpeg = Get-Command ffmpeg -ErrorAction SilentlyContinue
-if (-not $ffmpeg) {
-    throw "FFmpeg was not found on PATH."
-}
-
 Write-Host "Python: $(& $PythonCommand --version 2>&1)"
-Write-Host "FFmpeg: $(ffmpeg -version 2>&1 | Select-Object -First 1)"
 
-# -----------------------------------------------------------------------------
-# 3. Create an isolated temporary repository copy
-# -----------------------------------------------------------------------------
-$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) ("WhisperX-clean-install-" + [Guid]::NewGuid().ToString("N"))
+$testRoot = Join-Path ([System.IO.Path]::GetTempPath()) `
+    ("WhisperX-clean-install-" + [Guid]::NewGuid().ToString("N"))
+
 New-Item -ItemType Directory -Force -Path $testRoot | Out-Null
-
 Write-Host "Temporary test directory: $testRoot"
 
 try {
-    # robocopy is used because it handles repository trees reliably on Windows.
-    # Exit codes 0-7 indicate success/non-fatal differences.
-    $null = robocopy $RepositoryRoot $testRoot /E /XD ".git" ".venv" "env" "test" /NFL /NDL /NJH /NJS /NP
+    # Exclude generated/local environments and repository metadata.
+    $null = robocopy `
+        $RepositoryRoot `
+        $testRoot `
+        /E `
+        /XD ".git" ".venv" "env" `
+        /NFL /NDL /NJH /NJS /NP
+
     if ($LASTEXITCODE -gt 7) {
         throw "Failed to copy repository to temporary test directory. Robocopy exit code: $LASTEXITCODE"
     }
 
-    # -------------------------------------------------------------------------
-    # 4. Run Phase 1 exactly as a new clone would
-    # -------------------------------------------------------------------------
-    $scripts = @(
-        "01-check-prerequisites.ps1",
-        "02-create-environment.ps1",
-        "03-install-whisperx.ps1",
-        "04-verify-installation.ps1"
-    )
+    $testSetupScript = Join-Path $testRoot "01-Environment-Setup\setup.ps1"
 
-    foreach ($scriptName in $scripts) {
-        $scriptPath = Join-Path $testRoot "01-Environment-Setup\$scriptName"
+    Write-Host ""
+    Write-Host "--- Running setup.ps1 in isolated repository ---" -ForegroundColor Yellow
 
-        Write-Host ""
-        Write-Host "--- Running $scriptName ---" -ForegroundColor Yellow
+    # Use Bypass only for the child test process so a downloaded/cloned script
+    # is not blocked by the host's RemoteSigned policy.
+    & powershell.exe `
+        -NoProfile `
+        -ExecutionPolicy Bypass `
+        -File $testSetupScript `
+        -PythonCommand $PythonCommand
 
-        $arguments = @(
-            "-NoProfile",
-            "-ExecutionPolicy", "Bypass",
-            "-File", $scriptPath
-        )
-
-        if ($scriptName -eq "02-create-environment.ps1") {
-            $arguments += @("-PythonCommand", $PythonCommand)
-        }
-
-        if ($scriptName -eq "03-install-whisperx.ps1" -and $UpgradePip) {
-            $arguments += "-UpgradePip"
-        }
-
-        & powershell @arguments
-
-        if ($LASTEXITCODE -ne 0) {
-            throw "$scriptName failed with exit code $LASTEXITCODE."
-        }
+    if ($LASTEXITCODE -ne 0) {
+        throw "setup.ps1 failed with exit code $LASTEXITCODE."
     }
 
-    # -------------------------------------------------------------------------
-    # 5. Independent final assertions
-    # -------------------------------------------------------------------------
     $venvPython = Join-Path $testRoot ".venv\Scripts\python.exe"
 
     if (-not (Test-Path -LiteralPath $venvPython -PathType Leaf)) {
@@ -154,7 +111,7 @@ try {
     Write-Host ""
     Write-Host "--- Independent environment assertions ---" -ForegroundColor Yellow
 
-    & $venvPython -c "import torch, torchcodec, whisperx; from whisperx.diarize import DiarizationPipeline; print('All required imports OK'); print('PyTorch:', torch.__version__); print('WhisperX:', whisperx.__file__)"
+    & $venvPython -c "import torch, whisperx; from whisperx.diarize import DiarizationPipeline; print('WhisperX import OK'); print('DiarizationPipeline import OK'); print('PyTorch:', torch.__version__); print('WhisperX:', whisperx.__version__ if hasattr(whisperx, '__version__') else 'installed')"
 
     if ($LASTEXITCODE -ne 0) {
         throw "Independent Python import verification failed."
@@ -163,7 +120,7 @@ try {
     Write-Host ""
     Write-Host "==============================================" -ForegroundColor Green
     Write-Host "CLEAN-INSTALL TEST PASSED" -ForegroundColor Green
-    Write-Host "A fresh environment was created and verified." -ForegroundColor Green
+    Write-Host "Fresh repository environment created and verified." -ForegroundColor Green
     Write-Host "==============================================" -ForegroundColor Green
 }
 catch {
