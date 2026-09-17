@@ -1,49 +1,35 @@
 # 01 — Environment Setup
 
-This directory prepares a Windows computer to run the WhisperX Transcription project.
-
-## Normal entry point
-
-For a fresh clone, use:
+Prepares a Windows computer to run the WhisperX Transcription project. You normally run this
+**once per computer**.
 
 ```powershell
 .\01-Environment-Setup\setup.ps1
 ```
 
-Run this from the repository root.
+Run it from the repository root. It:
 
-You normally run this **once per computer**.
+1. checks Python;
+2. checks FFmpeg, and installs it through winget when possible;
+3. creates the virtual environment at the configured external location;
+4. installs the dependencies from `requirements.txt`;
+5. configures the Hugging Face token when one is needed;
+6. verifies WhisperX and its diarization API.
 
-## What setup.ps1 does
+Afterwards, the pipeline runs without activating anything manually.
 
-The setup entry point automates the environment preparation:
+## Documentation
 
-1. Checks Python.
-2. Checks FFmpeg and attempts automatic installation when supported.
-3. Creates the virtual environment at the configured external location.
-4. Installs dependencies from `requirements.txt`.
-5. Configures the Hugging Face token when required.
-6. Verifies WhisperX and its diarization API.
+| You want to | Go to |
+|---|---|
+| Set up for the first time, step by step | [Tutorial: your first transcript](../docs/tutorials/first-transcription.md) |
+| Look up a parameter of any script here | [Reference: setup scripts](../docs/reference/setup-scripts.md) |
+| Configure or replace the Hugging Face token | [How-to](../docs/how-to/configure-hugging-face-token.md) |
+| Put the environment somewhere else | [How-to](../docs/how-to/move-the-python-environment.md) |
+| Fix a broken environment | [How-to](../docs/how-to/repair-an-environment.md) |
+| Understand why the environment is outside the repository | [Explanation](../docs/explanation/runtime-outside-the-repository.md) |
 
-After successful setup, the transcription pipeline can be run without manually activating the virtual environment.
-
-## Hugging Face token
-
-Speaker diarization requires Hugging Face authentication.
-
-If no token is already configured, `setup.ps1` prompts the user for it.
-
-Alternatively:
-
-```powershell
-.\01-Environment-Setup\setup.ps1 -HFToken "hf_..."
-```
-
-Never commit the token to the repository.
-
-## Individual scripts
-
-The directory also contains these building blocks:
+## The other scripts here
 
 ```text
 01-check-prerequisites.ps1
@@ -52,18 +38,13 @@ The directory also contains these building blocks:
 04-verify-installation.ps1
 ```
 
-For normal users, **do not run these individually**. Use:
-
-```powershell
-.\01-Environment-Setup\setup.ps1
-```
-
-The individual scripts remain useful for maintenance and troubleshooting.
+These are maintenance and troubleshooting building blocks. `setup.ps1` does not call them, and
+normal users do not need them. See
+[reference: setup scripts](../docs/reference/setup-scripts.md) for what each one does.
 
 ## Virtual environment
 
-The environment is created **outside the repository**, at the path configured in
-`settings.json`:
+The environment is created **outside the repository**, at the path configured in `settings.json`:
 
 ```text
 %LOCALAPPDATA%\WhisperX-Transcription\venv
@@ -86,12 +67,10 @@ Or permanently for this machine, in `settings.local.json`:
 }
 ```
 
-If an old `.venv`, `env` or `whisperx-env` still exists inside the repository, setup reports
-it. Nothing uses it any more, and it is safe to delete once the new environment works.
+If an old `.venv`, `env` or `whisperx-env` still exists inside the repository, setup reports it.
+Nothing uses it any more, and it is safe to delete once the new environment works.
 
 ## After setup
-
-Run:
 
 ```powershell
 .\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"

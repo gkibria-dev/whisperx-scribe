@@ -1,102 +1,51 @@
 # 02 — Transcription Pipeline
 
-This directory contains the reusable audio transcription pipeline.
-
-## Normal entry point
-
-Use:
+The reusable audio transcription pipeline.
 
 ```powershell
 .\02-Transcription-Pipeline\run_pipeline.ps1 "C:\path\to\audio.wav"
 ```
 
-You do not need to activate the environment manually. The PowerShell runner uses the
-environment configured in `settings.json` (`environment.venvPath`), which lives outside the
-repository.
+You do not need to activate the environment manually. The runner uses the environment
+configured in `settings.json` (`environment.venvPath`), which lives outside the repository. If
+that environment does not exist, the runner stops and tells you to run
+`01-Environment-Setup\setup.ps1`. It does not fall back to an environment inside the repository.
 
-If that environment does not exist, the runner stops and tells you to run
-`01-Environment-Setup\setup.ps1`. It does not fall back to an environment inside the
-repository — keeping the Python runtime out of version control is deliberate.
+Model, device, compute type, language and speaker-count defaults also come from `settings.json`.
+Any argument passed on the command line overrides them.
 
-Model, device, compute type, language and speaker-count defaults also come from
-`settings.json`. Any argument passed on the command line overrides them.
+## Documentation
 
-## Pipeline
+| You want to | Go to |
+|---|---|
+| Run the pipeline for the first time | [Tutorial: your first transcript](../docs/tutorials/first-transcription.md) |
+| Look up a parameter or its allowed values | [Reference: `run_pipeline.ps1`](../docs/reference/run-pipeline.md) |
+| Look up a stage script's arguments | [Reference: pipeline stage scripts](../docs/reference/pipeline-stage-scripts.md) |
+| Know what is in each output file | [Reference: output files](../docs/reference/output-files.md) |
+| Set the language | [How-to](../docs/how-to/set-transcription-language.md) |
+| Make a run faster or more accurate | [How-to](../docs/how-to/choose-model-and-speed.md) |
+| Set the number of speakers | [How-to](../docs/how-to/set-speaker-count.md) |
+| Change where transcripts are written | [How-to](../docs/how-to/choose-output-location.md) |
+| Debug one stage on its own | [How-to](../docs/how-to/run-a-single-stage.md) |
+| Understand the four-stage design | [Explanation](../docs/explanation/how-the-pipeline-works.md) |
 
-```text
-Audio
-  │
-  ▼
-transcribe.py
-  │
-  ▼
-*_raw.json
-  │
-  ▼
-align_and_merge.py
-  │
-  ▼
-*_aligned.json
-  │
-  ▼
-diarize.py
-  │
-  ▼
-*_diarized.json
-  │
-  ▼
-finalize.py
-  │
-  ▼
-*_final.txt
-```
-
-## Stage 1 — Transcription
-
-`transcribe.py` creates:
+## Stages
 
 ```text
-*_raw.json
+Audio ──▶ transcribe.py ──▶ *_raw.json ──▶ align_and_merge.py ──▶ *_aligned.json
+                                                                        │
+       *_final.txt ◀── finalize.py ◀── *_diarized.json ◀── diarize.py ───┘
 ```
 
-This contains the initial transcription and segment timing.
+| Stage | Script | Adds |
+|---|---|---|
+| 1 | `transcribe.py` | The text, in chunks, and the language |
+| 2 | `align_and_merge.py` | Word-level timings |
+| 3 | `diarize.py` | Speaker labels such as `SPEAKER_00`. Requires a Hugging Face token. |
+| 4 | `finalize.py` | The readable, timestamped transcript |
 
-## Stage 2 — Alignment
-
-`align_and_merge.py` creates:
-
-```text
-*_aligned.json
-```
-
-The alignment stage adds word-level timing information.
-
-## Stage 3 — Speaker diarization
-
-`diarize.py` creates:
-
-```text
-*_diarized.json
-```
-
-This stage assigns speaker labels such as:
-
-```text
-SPEAKER_00
-SPEAKER_01
-```
-
-It requires Hugging Face authentication.
-
-## Stage 4 — Final transcript
-
-`finalize.py` creates:
-
-```text
-*_final.txt
-```
-
-This is the human-readable speaker-labeled transcript.
+Each script is a standalone command-line program that reads files and writes files. They never
+import each other. For normal use, run `run_pipeline.ps1` rather than the Python scripts.
 
 ## Example
 
@@ -116,40 +65,12 @@ C:\Recordings\interview_final.txt
 ```
 
 Outputs land beside the source audio by default. Set `output.mode` to `directory` in
-`settings.json` to collect them in one configured folder instead, or pass `-OutputDirectory`
-to redirect a single run.
+`settings.json` to collect them in one configured folder instead, or pass `-OutputDirectory` to
+redirect a single run.
 
-## Scripts
-
-```text
-scripts/
-├── transcribe.py
-├── align_and_merge.py
-├── diarize.py
-└── finalize.py
-```
-
-The scripts are separated by responsibility so individual stages can be maintained and tested independently.
-
-For normal use, run `run_pipeline.ps1` rather than running the Python scripts manually.
+The intermediate JSON files are kept on purpose: they are what you look at when a stage
+misbehaves.
 
 ## Input audio
 
-The pipeline accepts audio formats supported by the underlying WhisperX/audio stack. Common examples include:
-
-```text
-.wav
-.m4a
-.mp3
-```
-
-## Intermediate files
-
-The four outputs have different purposes:
-
-- `_raw.json` — raw transcription
-- `_aligned.json` — aligned transcription with word timing
-- `_diarized.json` — speaker-assigned transcript data
-- `_final.txt` — readable final transcript
-
-Keeping the intermediate JSON files makes troubleshooting and future processing easier.
+Any format the underlying WhisperX/FFmpeg stack can decode, including `.wav`, `.m4a` and `.mp3`.

@@ -24,8 +24,9 @@ All commands run from the repository root.
 .\02-Transcription-Pipeline\run_pipeline.ps1 "audio.wav" -Model medium -Device cpu -ComputeType int8 `
     -Language en -MinSpeakers 2 -MaxSpeakers 2 -OutputDirectory ".\out"
 
-# Tests (there are exactly three; all PowerShell scripts, not pytest)
+# Tests (there are exactly four; all PowerShell scripts, not pytest)
 .\tests\test-settings.ps1               # settings layering + git hygiene; seconds, offline
+.\tests\test-docs.ps1                   # every option/setting documented in docs\reference; seconds, offline
 .\tests\test-clean-install.ps1          # fresh-clone setup test in a temp repo copy
 .\tests\test-clean-install.ps1 -KeepTemp
 .\tests\test-pipeline.ps1               # end-to-end run against tests\data\sample-2-speakers.wav
@@ -41,8 +42,15 @@ All commands run from the repository root.
 
 There is no linter, formatter, or test framework configured. `test-settings.ps1` is the fast
 check to run after touching configuration — it needs no environment and finishes in seconds.
-`test-pipeline.ps1` is the smallest meaningful check after touching pipeline code; it runs the
-real `run_pipeline.ps1`, so on CPU it takes minutes and downloads models on first run.
+`test-docs.ps1` is the equivalent check after touching a parameter, an `add_argument`, or a
+settings key. `test-pipeline.ps1` is the smallest meaningful check after touching pipeline
+code; it runs the real `run_pipeline.ps1`, so on CPU it takes minutes and downloads models on
+first run.
+
+**Adding, renaming or removing a parameter or setting means editing `docs/reference/` in the
+same change.** `test-docs.ps1` fails both ways — an undocumented option, and a documented
+option that no longer exists — and prints the file and heading to fix. It compares names only,
+so defaults and allowed values in the reference docs still have to be checked by hand.
 
 ## Architecture
 
@@ -132,8 +140,13 @@ install roots.
   here-string that tells the user what to do next.
 - Tests call the real production entry points rather than reimplementing them — that is the
   stated test philosophy. Keep it when adding tests.
-- Docs live in Markdown next to what they describe: root `README.md`, one `README.md` per
-  phase directory, `README-testing.md` for tests, and `docs/plans/` for plans.
+- Docs are Markdown, split by Diátaxis type, one type per file:
+  `docs/tutorials/`, `docs/how-to/`, `docs/reference/`, `docs/explanation/`, plus `docs/plans/`
+  for plans. Tutorials and how-tos carry no rationale; explanations carry no steps; reference
+  files carry facts only. New documentation goes in the matching subdirectory, not into a README.
+- The READMEs are entry points, not documentation: root `README.md`, one per phase directory,
+  and `README-testing.md`. Each says what its directory is for, gives the most common command,
+  and links into `docs/` by audience. Detail that grows belongs in `docs/`.
 - Any script needing a path dot-sources `settings.ps1` and resolves it through
   `Resolve-ConfiguredPath`. Do not reintroduce a hard-coded environment or output path.
 
