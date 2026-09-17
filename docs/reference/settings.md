@@ -68,7 +68,10 @@ In JSON, backslashes are escaped: `"E:\\envs\\whisperx"`.
   "test": {
     "outputDirectory": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-output",
     "environmentPath": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-venv",
-    "keepOutput": false
+    "keepOutput": false,
+    "model": "medium",
+    "device": "cpu",
+    "computeType": "int8"
   }
 }
 ```
@@ -220,3 +223,39 @@ or contain it, or be inside it.
 | Overridden by | `test-pipeline.ps1 -KeepOutput` (can only turn it on) |
 
 Use the JSON literals `true` or `false`. A string such as `"false"` counts as true.
+
+### `test.model`
+
+| | |
+|---|---|
+| Type | string |
+| Default | `medium` |
+| Read by | `test-pipeline.ps1` |
+| Overridden by | `test-pipeline.ps1 -Model` |
+| Accepted values | See [run-pipeline.md](run-pipeline.md#-model) |
+
+`test-pipeline.ps1` does not read `pipeline.model`.
+
+### `test.device`
+
+| | |
+|---|---|
+| Type | string |
+| Default | `cpu` |
+| Read by | `test-pipeline.ps1` |
+| Overridden by | `test-pipeline.ps1 -Device` |
+| Accepted values | `cpu`, `cuda` |
+
+`test-pipeline.ps1` does not read `pipeline.device`.
+
+### `test.computeType`
+
+| | |
+|---|---|
+| Type | string |
+| Default | `int8` |
+| Read by | `test-pipeline.ps1` |
+| Overridden by | `test-pipeline.ps1 -ComputeType` |
+| Accepted values | See [run-pipeline.md](run-pipeline.md#-computetype). Must be supported on `test.device`. |
+
+`test-pipeline.ps1` does not read `pipeline.computeType`.

@@ -97,6 +97,7 @@ try {
         "venvPath falls back to the built-in default"
     Assert-Equal "medium" $settings.pipeline.model "pipeline.model falls back to the built-in default"
     Assert-Equal "beside-audio" $settings.output.mode "output.mode falls back to the built-in default"
+    Assert-Equal "medium" $settings.test.model "test.model falls back to the built-in default"
 
     # ------------------------------------------------------------------
     Write-Host ""
@@ -327,6 +328,18 @@ try {
         # There must be no way back to a repository-local environment.
         Assert-True ($source -notmatch 'EnvironmentCandidates') `
             "$consumer has no repository-local environment fallback"
+    }
+
+    # The pipeline test takes its model, device and compute type from the test
+    # section, never from pipeline.*, so machine preferences cannot change its cost.
+    $testPipeline = "tests\test-pipeline.ps1"
+    $source = Get-Content -LiteralPath (Join-Path $RepositoryRoot $testPipeline) -Raw -Encoding UTF8
+
+    Assert-True ($source -match 'settings\.ps1') "$testPipeline loads settings.ps1"
+
+    foreach ($key in @("model", "device", "computeType")) {
+        Assert-True ($source -match "Settings\.test\.$key\b") "$testPipeline reads test.$key"
+        Assert-True ($source -notmatch "Settings\.pipeline\.$key\b") "$testPipeline does not read pipeline.$key"
     }
 
     Write-Host ""

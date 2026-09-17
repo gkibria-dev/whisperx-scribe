@@ -21,7 +21,8 @@ two slow tests spend minutes on model downloads and CPU inference.
 
 No test writes anything inside the repository, and `git status` should be clean after any of
 them. The slow tests use the external locations configured in `settings.json`
-(`test.outputDirectory`, `test.environmentPath`, `test.keepOutput`).
+(`test.outputDirectory`, `test.environmentPath`, `test.keepOutput`), and the pipeline test takes
+its model, device and compute type from `test.model`, `test.device` and `test.computeType`.
 
 ## Documentation
 

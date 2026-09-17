@@ -14,6 +14,9 @@ banner on failure. No test writes generated files inside the repository.
 |---|---|
 | `test.outputDirectory` | `test-pipeline.ps1` |
 | `test.keepOutput` | `test-pipeline.ps1` |
+| `test.model` | `test-pipeline.ps1` |
+| `test.device` | `test-pipeline.ps1` |
+| `test.computeType` | `test-pipeline.ps1` |
 | `test.environmentPath` | `test-clean-install.ps1` |
 | `environment.venvPath` | `test-pipeline.ps1` (the environment it runs), `test-clean-install.ps1` (overlap check) |
 
@@ -133,9 +136,18 @@ Runs `run_pipeline.ps1` in a child `powershell.exe -ExecutionPolicy Bypass` with
 
 `tests\data\sample-2-speakers.expected.txt` must exist, but its content is not compared.
 
-Because the model, device and compute type are always passed explicitly, `pipeline.model`,
-`pipeline.device`, `pipeline.computeType`, `pipeline.minSpeakers` and `pipeline.maxSpeakers`
-do not affect this test. `pipeline.language` does apply when `-Language` is empty.
+| Value passed to `run_pipeline.ps1` | Source |
+|---|---|
+| `-Model` | `-Model`, when not empty, otherwise `test.model` |
+| `-Device` | `-Device`, when not empty, otherwise `test.device` |
+| `-ComputeType` | `-ComputeType`, when not empty, otherwise `test.computeType` |
+| `-MinSpeakers`, `-MaxSpeakers` | Always `2` |
+| `-Language` | `-Language`, only when not empty |
+
+Because the model, device, compute type and speaker counts are always passed explicitly,
+`pipeline.model`, `pipeline.device`, `pipeline.computeType`, `pipeline.minSpeakers` and
+`pipeline.maxSpeakers` do not affect this test. `pipeline.language` does apply when `-Language`
+is empty. The resolved model, device and compute type are printed at the start of the run.
 
 ### `-Audio`
 
@@ -162,7 +174,7 @@ It is kept after a failed run.
 | | |
 |---|---|
 | Type | string |
-| Default | `medium` (hard-coded, `pipeline.model` is not read) |
+| Default | `medium`, from `test.model` (`pipeline.model` is not read) |
 | Accepted values | As `run_pipeline.ps1 -Model` ([run-pipeline.md](run-pipeline.md#-model)) |
 
 ### `-Device`
@@ -170,7 +182,7 @@ It is kept after a failed run.
 | | |
 |---|---|
 | Type | string |
-| Default | `cpu` (hard-coded, `pipeline.device` is not read) |
+| Default | `cpu`, from `test.device` (`pipeline.device` is not read) |
 | Accepted values | `cpu`, `cuda` |
 
 ### `-ComputeType`
@@ -178,7 +190,7 @@ It is kept after a failed run.
 | | |
 |---|---|
 | Type | string |
-| Default | `int8` (hard-coded, `pipeline.computeType` is not read) |
+| Default | `int8`, from `test.computeType` (`pipeline.computeType` is not read) |
 | Accepted values | As `run_pipeline.ps1 -ComputeType` ([run-pipeline.md](run-pipeline.md#-computetype)) |
 
 ### `-Language`

@@ -15,6 +15,12 @@
     The test expects the sample to contain two distinct speakers. Therefore it
     runs the production pipeline with --min-speakers 2 and --max-speakers 2 and
     verifies that both SPEAKER_00 and SPEAKER_01 appear in the diarized output.
+    The speaker count is a property of the sample, so it is fixed and
+    pipeline.minSpeakers / pipeline.maxSpeakers are not read.
+
+    Model, device and compute type default to test.model, test.device and
+    test.computeType from settings.json - not to pipeline.*, so a machine's
+    transcription preferences cannot change the cost or outcome of this test.
 
 .PARAMETER Audio
     Optional path to the test audio file.
@@ -24,13 +30,13 @@
     containing the source audio file, matching the normal pipeline behavior.
 
 .PARAMETER Model
-    WhisperX model to use. Default: medium.
+    WhisperX model to use. Default: test.model (medium).
 
 .PARAMETER Device
-    Inference device. Default: cpu.
+    Inference device. Default: test.device (cpu).
 
 .PARAMETER ComputeType
-    WhisperX compute type. Default: int8.
+    WhisperX compute type. Default: test.computeType (int8).
 
 .PARAMETER Language
     Optional language code. Leave empty for automatic language detection.
@@ -52,9 +58,9 @@
 param(
     [string]$Audio = "",
     [string]$OutputDirectory = "",
-    [string]$Model = "medium",
-    [string]$Device = "cpu",
-    [string]$ComputeType = "int8",
+    [string]$Model = "",
+    [string]$Device = "",
+    [string]$ComputeType = "",
     [string]$Language = "",
     [switch]$KeepOutput
 )
@@ -66,6 +72,13 @@ $PipelineScript = Join-Path $RepositoryRoot "02-Transcription-Pipeline\run_pipel
 
 . (Join-Path $RepositoryRoot "settings.ps1")
 $Settings = Get-ProjectSettings -RepositoryRoot $RepositoryRoot
+
+# Unset parameters take their defaults from the test section of settings.json,
+# not from pipeline.*, so a machine's transcription preferences cannot change
+# the cost or the outcome of this test. An explicitly passed argument wins.
+if ([string]::IsNullOrWhiteSpace($Model)) { $Model = $Settings.test.model }
+if ([string]::IsNullOrWhiteSpace($Device)) { $Device = $Settings.test.device }
+if ([string]::IsNullOrWhiteSpace($ComputeType)) { $ComputeType = $Settings.test.computeType }
 
 if (-not (Test-Path -LiteralPath $PipelineScript -PathType Leaf)) {
     throw "Pipeline script not found: $PipelineScript"
@@ -127,6 +140,9 @@ Write-Host "=== WhisperX pipeline integration test ===" -ForegroundColor Cyan
 Write-Host "Repository: $RepositoryRoot"
 Write-Host "Audio:      $AudioPath"
 Write-Host "Output:     $OutputDirectory"
+Write-Host "Model:      $Model"
+Write-Host "Device:     $Device"
+Write-Host "Compute:    $ComputeType"
 
 if (-not (Test-Path -LiteralPath $python -PathType Leaf)) {
     throw "WhisperX environment not found at $environmentPath. Run .\01-Environment-Setup\setup.ps1 first."

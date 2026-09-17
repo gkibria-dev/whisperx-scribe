@@ -256,10 +256,8 @@ Also observed on this machine, and possibly related:
 
 ## 8. Follow-ups outside this plan
 
-- **Separate session (decided 2026-09-17):** make `test-pipeline.ps1` read pipeline defaults
-  from `settings.json` instead of hard-coding `medium` / `cpu` / `int8`.
-  - Until then, `docs/reference/test-scripts.md` documents the current hard-coded defaults.
-  - That work must update the reference doc too. `test-docs.ps1` checks parameter names, not
-    default values, so it won't catch a stale default.
+- **Done 2026-09-17:** `test-pipeline.ps1` now reads its model, device and compute type from
+  the new `test.model` / `test.device` / `test.computeType` settings instead of hard-coding
+  them. See [test-pipeline-settings-defaults.md](test-pipeline-settings-defaults.md).
 - **No action decided:** a bad language code isn't caught until after transcription, when
   `align_and_merge.py` fails. The reference docs and the language how-to state this.

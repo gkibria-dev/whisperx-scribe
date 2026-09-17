@@ -40,6 +40,9 @@ function Get-DefaultProjectSettings {
             outputDirectory = '%LOCALAPPDATA%\WhisperX-Transcription\test-output'
             environmentPath = '%LOCALAPPDATA%\WhisperX-Transcription\test-venv'
             keepOutput      = $false
+            model           = 'medium'
+            device          = 'cpu'
+            computeType     = 'int8'
         }
     }
 }
