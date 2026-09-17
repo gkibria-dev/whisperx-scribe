@@ -42,6 +42,7 @@ huggingface/
 *.opus
 *.webm
 !tests/data/sample-2-speakers.wav
+!tests/data/sample-2-speakers.mp3
 
 
 # Generated WhisperX artifacts

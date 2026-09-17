@@ -1,4 +1,8 @@
-SPEAKER_00: Hello, this is a short test of the WhisperX transcription pipeline. We are checking transcription, alignment, and speaker diarization.
-SPEAKER_01: Great. The sample contains two speakers, clear pauses, and ordinary English sentences. This should make the pipeline easy to verify.
-SPEAKER_00: Hello, this is a short test of the WhisperX transcription pipeline. We are checking transcription, alignment, and speaker diarization.
-SPEAKER_01: Great. The sample contains two speakers, clear pauses, and ordinary English sentences. This should make the pipeline easy to verify.
+SPEAKER_00:
+Hello, this is a short WhisperX pipeline test.
+SPEAKER_01:
+Great. We have two speakers and clear pauses.
+SPEAKER_00:
+We are checking transcription and speaker diarization.
+SPEAKER_01:
+This should make the pipeline easy to verify.
