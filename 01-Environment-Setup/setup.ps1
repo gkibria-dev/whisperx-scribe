@@ -1,4 +1,4 @@
-# WhisperX Transcription - Environment Setup
+# WhisperX Scribe - Environment Setup
 # Run from the repository root:
 #   .\01-Environment-Setup\setup.ps1
 #
@@ -253,7 +253,7 @@ again.
 
 Write-Host ""
 Write-Host "==============================================" -ForegroundColor Cyan
-Write-Host " WhisperX Transcription - Environment Setup" -ForegroundColor Cyan
+Write-Host " WhisperX Scribe - Environment Setup" -ForegroundColor Cyan
 Write-Host "==============================================" -ForegroundColor Cyan
 Write-Host "Repository:  $RepoRoot"
 Write-Host "Environment: $VenvPath"

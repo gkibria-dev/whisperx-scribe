@@ -1,6 +1,6 @@
 # 01 — Environment Setup
 
-Prepares a Windows computer to run the WhisperX Transcription project. You normally run this
+Prepares a Windows computer to run WhisperX Scribe. You normally run this
 **once per computer**.
 
 ```powershell

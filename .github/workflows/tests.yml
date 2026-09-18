@@ -1,0 +1,29 @@
+# Runs the two offline tests. test-pipeline.ps1 and test-clean-install.ps1 need the
+# WhisperX environment, model downloads and a Hugging Face token, so they stay local.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  offline-tests:
+    runs-on: windows-latest
+    timeout-minutes: 10
+    defaults:
+      run:
+        # Windows PowerShell 5.1, the version the project targets.
+        shell: powershell
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Settings test
+        run: .\tests\test-settings.ps1
+
+      - name: Documentation test
+        run: .\tests\test-docs.ps1

@@ -1,4 +1,4 @@
-# WhisperX Transcription — Automated Testing
+# WhisperX Scribe — Automated Testing
 
 This project has four automated PowerShell tests. Run them from the repository root.
 

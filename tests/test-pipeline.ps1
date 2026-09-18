@@ -266,3 +266,7 @@ finally {
         Remove-Item -LiteralPath $OutputDirectory -Recurse -Force -ErrorAction SilentlyContinue
     }
 }
+
+# Every failure path throws before this point. Exit 0 explicitly so a trailing native
+# command (git, robocopy) cannot leave a non-zero $LASTEXITCODE behind on success.
+exit 0

@@ -1,7 +1,7 @@
 # Reference: test scripts
 
-The four PowerShell tests in `tests\`. Each one exits non-zero and prints a red `... TEST FAILED`
-banner on failure. No test writes generated files inside the repository.
+The four PowerShell tests in `tests\`. Each one exits 0 on success, and on failure exits non-zero
+and prints a red `... TEST FAILED` banner. No test writes generated files inside the repository.
 
 | Script | Covers | Needs the WhisperX environment | Network | Typical duration |
 |---|---|---|---|---|
@@ -209,3 +209,14 @@ It is kept after a failed run.
 | Default | off. Also on when `test.keepOutput` is `true`. |
 
 Keeps the output directory after a successful run.
+
+## Continuous integration
+
+| | |
+|---|---|
+| Workflow | `.github/workflows/tests.yml` |
+| Runs | `test-settings.ps1`, then `test-docs.ps1` |
+| Runner | `windows-latest`, Windows PowerShell 5.1 |
+| Triggers | push to `main`, every pull request, manual run |
+
+`test-clean-install.ps1` and `test-pipeline.ps1` do not run in CI.

@@ -1,4 +1,4 @@
-# WhisperX Transcription - shared configuration loader
+# WhisperX Scribe - shared configuration loader
 #
 # Dot-source this from any project script:
 #     . (Join-Path $RepoRoot "settings.ps1")

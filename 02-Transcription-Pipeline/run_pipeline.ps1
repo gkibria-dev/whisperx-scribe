@@ -155,7 +155,7 @@ $Final = Join-Path $OutputDirectory "${Stem}_final.txt"
 
 try {
     Write-Host ""
-    Write-Host "WhisperX Transcription Pipeline" -ForegroundColor Green
+    Write-Host "WhisperX Scribe Pipeline" -ForegroundColor Green
     Write-Host "Audio:       $AudioPath"
     Write-Host "Environment: $Python"
     Write-Host "Output:      $OutputDirectory"

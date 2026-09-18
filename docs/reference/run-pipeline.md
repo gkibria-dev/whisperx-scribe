@@ -245,7 +245,7 @@ An empty prompt answer stops the run with `No Hugging Face token was supplied.`
 
 | Line | When |
 |---|---|
-| `WhisperX Transcription Pipeline`, `Audio:`, `Environment:`, `Output:` | Start of the run |
+| `WhisperX Scribe Pipeline`, `Audio:`, `Environment:`, `Output:` | Start of the run |
 | `=== <script>.py ===` | Before each stage |
 | `=== Pipeline complete ===` followed by the four output paths | After the last stage |
 | `<script>.py failed with exit code <n>.` | A stage failed. Later stages do not run. |
