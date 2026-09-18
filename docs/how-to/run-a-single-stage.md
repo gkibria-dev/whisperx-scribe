@@ -8,7 +8,7 @@ need `<stem>_aligned.json`.
 1. Store the environment's Python path in a variable:
 
    ```powershell
-   $py = "$env:LOCALAPPDATA\WhisperX-Transcription\venv\Scripts\python.exe"
+   $py = "$env:LOCALAPPDATA\WhisperX-Scribe\venv\Scripts\python.exe"
    ```
 
    If you changed `environment.venvPath`, use that path instead.

@@ -30,7 +30,7 @@ Stage 1 output is kept, so you can skip the transcription.
 1. Set the paths:
 
    ```powershell
-   $py = "$env:LOCALAPPDATA\WhisperX-Transcription\venv\Scripts\python.exe"
+   $py = "$env:LOCALAPPDATA\WhisperX-Scribe\venv\Scripts\python.exe"
    $s  = ".\02-Transcription-Pipeline\scripts"
    $a  = "C:\Recordings\call"   # the audio path without its extension
    ```

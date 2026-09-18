@@ -21,7 +21,7 @@
 function Get-DefaultProjectSettings {
     return @{
         environment = @{
-            venvPath      = '%LOCALAPPDATA%\WhisperX-Transcription\venv'
+            venvPath      = '%LOCALAPPDATA%\WhisperX-Scribe\venv'
             pythonCommand = 'python'
         }
         pipeline = @{
@@ -35,11 +35,11 @@ function Get-DefaultProjectSettings {
         }
         output = @{
             mode      = 'beside-audio'
-            directory = '%LOCALAPPDATA%\WhisperX-Transcription\output'
+            directory = '%LOCALAPPDATA%\WhisperX-Scribe\output'
         }
         test = @{
-            outputDirectory = '%LOCALAPPDATA%\WhisperX-Transcription\test-output'
-            environmentPath = '%LOCALAPPDATA%\WhisperX-Transcription\test-venv'
+            outputDirectory = '%LOCALAPPDATA%\WhisperX-Scribe\test-output'
+            environmentPath = '%LOCALAPPDATA%\WhisperX-Scribe\test-venv'
             keepOutput      = $false
             model           = 'medium'
             device          = 'cpu'

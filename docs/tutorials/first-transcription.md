@@ -103,7 +103,7 @@ When it finishes you see:
 ```
 
 You have now done everything that is needed once per computer. The Python environment is
-installed outside the project folder, at `%LOCALAPPDATA%\WhisperX-Transcription\venv`.
+installed outside the project folder, at `%LOCALAPPDATA%\WhisperX-Scribe\venv`.
 
 ## Step 4: transcribe the sample recording
 

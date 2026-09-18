@@ -43,7 +43,7 @@ Fix an environment where setup or the pipeline fails with an import or package e
 1. Delete the environment directory. The default is:
 
    ```powershell
-   Remove-Item -LiteralPath "$env:LOCALAPPDATA\WhisperX-Transcription\venv" -Recurse -Force
+   Remove-Item -LiteralPath "$env:LOCALAPPDATA\WhisperX-Scribe\venv" -Recurse -Force
    ```
 
    If you changed `environment.venvPath`, delete that directory instead.

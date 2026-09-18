@@ -1,6 +1,6 @@
-# WhisperX Transcription
+# WhisperX Scribe
 
-A reusable Windows-based audio transcription project built around WhisperX.
+Audio transcription built around WhisperX, currently for Windows (PowerShell).
 
 The project processes an audio recording into a **time-aligned, speaker-labeled transcript**
 through a simple PowerShell command.
@@ -88,7 +88,7 @@ test artifacts — lives outside it, in a machine-local runtime directory.
 
 ```text
 REPOSITORY                                  RUNTIME
-(this folder, in Git)                       (%LOCALAPPDATA%\WhisperX-Transcription)
+(this folder, in Git)                       (%LOCALAPPDATA%\WhisperX-Scribe)
 
 settings.json          ───configures───▶    venv\           the Python environment
 settings.local.json                         output\         only if output.mode = directory
@@ -103,7 +103,7 @@ and means a test run can never leave generated files inside the repository. See
 ## Project structure
 
 ```text
-WhisperX-Transcription/
+whisperx-scribe/
 │
 ├── settings.json                  configurable paths and pipeline defaults
 ├── settings.local.json            optional, gitignored, per-machine overrides

@@ -1,0 +1,6 @@
+# Store text files with LF line endings; each clone checks out its platform's native endings.
+* text=auto
+
+# Audio test fixtures
+*.wav binary
+*.mp3 binary

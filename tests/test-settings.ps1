@@ -93,7 +93,7 @@ try {
     $sandbox = New-SettingsSandbox -MainJson $null -LocalJson $null
     $settings = Get-ProjectSettings -RepositoryRoot $sandbox
 
-    Assert-Equal '%LOCALAPPDATA%\WhisperX-Transcription\venv' $settings.environment.venvPath `
+    Assert-Equal '%LOCALAPPDATA%\WhisperX-Scribe\venv' $settings.environment.venvPath `
         "venvPath falls back to the built-in default"
     Assert-Equal "medium" $settings.pipeline.model "pipeline.model falls back to the built-in default"
     Assert-Equal "beside-audio" $settings.output.mode "output.mode falls back to the built-in default"
@@ -156,10 +156,10 @@ try {
     Write-Host ""
     Write-Host "--- Path resolution ---" -ForegroundColor Yellow
 
-    $resolved = Resolve-ConfiguredPath -Path '%LOCALAPPDATA%\WhisperX-Transcription\venv' `
+    $resolved = Resolve-ConfiguredPath -Path '%LOCALAPPDATA%\WhisperX-Scribe\venv' `
         -RepositoryRoot $RepositoryRoot
 
-    Assert-Equal (Join-Path $env:LOCALAPPDATA "WhisperX-Transcription\venv") $resolved `
+    Assert-Equal (Join-Path $env:LOCALAPPDATA "WhisperX-Scribe\venv") $resolved `
         "Resolve-ConfiguredPath expands %LOCALAPPDATA%"
     Assert-True ([System.IO.Path]::IsPathRooted($resolved)) `
         "the resolved environment path is absolute"

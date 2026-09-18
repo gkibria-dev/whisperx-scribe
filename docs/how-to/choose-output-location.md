@@ -26,7 +26,7 @@ By default, the four output files are written next to the audio file.
    ```
 
    Escape backslashes as `\\`. Leave out `directory` to use
-   `%LOCALAPPDATA%\WhisperX-Transcription\output`.
+   `%LOCALAPPDATA%\WhisperX-Scribe\output`.
 2. Run the pipeline without `-OutputDirectory`.
 3. Check the `Output:` line printed at the start of the run.
 

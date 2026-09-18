@@ -40,7 +40,7 @@ Make a run faster, or more accurate.
 3. List the compute types your GPU supports:
 
    ```powershell
-   & "$env:LOCALAPPDATA\WhisperX-Transcription\venv\Scripts\python.exe" -c "import ctranslate2; print(ctranslate2.get_supported_compute_types('cuda'))"
+   & "$env:LOCALAPPDATA\WhisperX-Scribe\venv\Scripts\python.exe" -c "import ctranslate2; print(ctranslate2.get_supported_compute_types('cuda'))"
    ```
 
    If you changed `environment.venvPath`, use that path instead.

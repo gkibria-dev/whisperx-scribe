@@ -50,7 +50,7 @@ Used only in steps 1 and 3. Every later step uses the environment's own `python.
 | | |
 |---|---|
 | Type | string |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\venv` |
 | Default from | `environment.venvPath` |
 | Accepted values | Directory path. `%VAR%` is expanded, and a relative path is resolved against the repository root. |
 
@@ -135,7 +135,7 @@ exists, it prints `The environment already exists. Nothing to create.` and exits
 | | |
 |---|---|
 | Type | string |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\venv` |
 | Default from | `environment.venvPath` |
 | Accepted values | Directory path, resolved as for `setup.ps1 -EnvironmentPath` |
 
@@ -170,7 +170,7 @@ Upgrades pip before installing packages.
 | | |
 |---|---|
 | Type | string |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\venv` |
 | Default from | `environment.venvPath` |
 | Accepted values | Path to an existing environment, resolved as for `setup.ps1 -EnvironmentPath` |
 
@@ -195,6 +195,6 @@ repository root.
 | | |
 |---|---|
 | Type | string |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\venv` |
 | Default from | `environment.venvPath` |
 | Accepted values | Path to an existing environment, resolved as for `setup.ps1 -EnvironmentPath` |

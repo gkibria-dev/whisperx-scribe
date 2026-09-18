@@ -50,7 +50,7 @@ In JSON, backslashes are escaped: `"E:\\envs\\whisperx"`.
 ```json
 {
   "environment": {
-    "venvPath": "%LOCALAPPDATA%\\WhisperX-Transcription\\venv",
+    "venvPath": "%LOCALAPPDATA%\\WhisperX-Scribe\\venv",
     "pythonCommand": "python"
   },
   "pipeline": {
@@ -64,11 +64,11 @@ In JSON, backslashes are escaped: `"E:\\envs\\whisperx"`.
   },
   "output": {
     "mode": "beside-audio",
-    "directory": "%LOCALAPPDATA%\\WhisperX-Transcription\\output"
+    "directory": "%LOCALAPPDATA%\\WhisperX-Scribe\\output"
   },
   "test": {
-    "outputDirectory": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-output",
-    "environmentPath": "%LOCALAPPDATA%\\WhisperX-Transcription\\test-venv",
+    "outputDirectory": "%LOCALAPPDATA%\\WhisperX-Scribe\\test-output",
+    "environmentPath": "%LOCALAPPDATA%\\WhisperX-Scribe\\test-venv",
     "keepOutput": false,
     "model": "medium",
     "device": "cpu",
@@ -84,7 +84,7 @@ In JSON, backslashes are escaped: `"E:\\envs\\whisperx"`.
 | | |
 |---|---|
 | Type | string, **path** |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\venv` |
 | Read by | `setup.ps1`, `02-create-environment.ps1`, `03-install-whisperx.ps1`, `04-verify-installation.ps1`, `run_pipeline.ps1`, `test-pipeline.ps1`, `test-clean-install.ps1` |
 | Overridden by | `-EnvironmentPath` on the setup scripts only |
 
@@ -197,7 +197,7 @@ Applies to every run, whatever the language. Set it together with `pipeline.lang
 | | |
 |---|---|
 | Type | string, **path** |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\output` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\output` |
 | Read by | `run_pipeline.ps1`, only when `output.mode` is `directory` |
 
 Created if it does not exist.
@@ -209,7 +209,7 @@ Created if it does not exist.
 | | |
 |---|---|
 | Type | string, **path** |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\test-output` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\test-output` |
 | Read by | `test-pipeline.ps1` |
 | Overridden by | `test-pipeline.ps1 -OutputDirectory` |
 
@@ -220,7 +220,7 @@ Parent of the per-run folders `<audio stem>-<yyyyMMdd-HHmmss>`.
 | | |
 |---|---|
 | Type | string, **path** |
-| Default | `%LOCALAPPDATA%\WhisperX-Transcription\test-venv` |
+| Default | `%LOCALAPPDATA%\WhisperX-Scribe\test-venv` |
 | Read by | `test-clean-install.ps1` |
 
 Parent of the throwaway per-run environments. It must not be the same as `environment.venvPath`,

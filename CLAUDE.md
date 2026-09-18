@@ -33,7 +33,7 @@ All commands run from the repository root.
 .\tests\test-pipeline.ps1 -KeepOutput
 
 # Run one pipeline stage directly (debugging; normally use run_pipeline.ps1)
-& "$env:LOCALAPPDATA\WhisperX-Transcription\venv\Scripts\python.exe" `
+& "$env:LOCALAPPDATA\WhisperX-Scribe\venv\Scripts\python.exe" `
     .\02-Transcription-Pipeline\scripts\transcribe.py audio.wav --output audio_raw.json
 
 # Inspect resolved configuration
@@ -89,7 +89,7 @@ exactly, so a missing or partial settings file still works. Never put `HF_TOKEN`
 file. Layering is defaults → `settings.json` → `settings.local.json` → command-line argument.
 
 **Environment discovery — there is none, by design.** The venv lives *outside* the repo at
-`environment.venvPath` (default `%LOCALAPPDATA%\WhisperX-Transcription\venv`). `run_pipeline.ps1`
+`environment.venvPath` (default `%LOCALAPPDATA%\WhisperX-Scribe\venv`). `run_pipeline.ps1`
 resolves that one path and throws if it is absent; it does **not** probe for `.venv`, `env` or
 `whisperx-env` in the repo. If you are tempted to add a fallback, don't — separating the 2.3 GB
 runtime from a Google-Drive-synced repo is the whole point. `Get-LegacyEnvironmentPaths` exists

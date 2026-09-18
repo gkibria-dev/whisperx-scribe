@@ -26,7 +26,7 @@ A virtual environment can't be moved safely, so this guide builds a new one at t
    .\02-Transcription-Pipeline\run_pipeline.ps1 ".\tests\data\sample-2-speakers.wav" -OutputDirectory "$env:TEMP\wx-check"
    ```
 
-5. Delete the old environment directory, by default `%LOCALAPPDATA%\WhisperX-Transcription\venv`.
+5. Delete the old environment directory, by default `%LOCALAPPDATA%\WhisperX-Scribe\venv`.
 
 Setup also reports any old `.venv`, `env` or `whisperx-env` folder inside the repository. You
 can delete these once the new environment works.

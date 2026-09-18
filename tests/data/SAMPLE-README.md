@@ -1,6 +1,6 @@
 # WhisperX Sample Audio
 
-`sample-2-speakers.wav` is a small, self-contained test fixture for the WhisperX transcription pipeline.
+`sample-2-speakers.wav` (and its MP3 copy, `sample-2-speakers.mp3`) is a small, self-contained test fixture for the WhisperX transcription pipeline.
 
 - Format: WAV, 16 kHz, mono PCM
 - Content: two alternating English speakers

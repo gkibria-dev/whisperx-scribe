@@ -47,7 +47,7 @@ normal users do not need them. See
 The environment is created **outside the repository**, at the path configured in `settings.json`:
 
 ```text
-%LOCALAPPDATA%\WhisperX-Transcription\venv
+%LOCALAPPDATA%\WhisperX-Scribe\venv
 ```
 
 Keeping it outside means a multi-gigabyte runtime never enters version control or a synced
