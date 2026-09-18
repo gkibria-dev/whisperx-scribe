@@ -18,13 +18,13 @@ defaults, see [settings.md](settings.md). For the files it produces, see
 ```powershell
 .\02-Transcription-Pipeline\run_pipeline.ps1 [-Audio] <string>
     [-Model <string>] [-Language <string>] [-Device <string>] [-ComputeType <string>]
-    [-MinSpeakers <int>] [-MaxSpeakers <int>]
+    [-AlignModel <string>] [-MinSpeakers <int>] [-MaxSpeakers <int>]
     [-OutputDirectory <string>] [-HFToken <string>]
 ```
 
 ### Value resolution
 
-For `-Model`, `-Language`, `-Device`, `-ComputeType`, `-MinSpeakers` and `-MaxSpeakers`:
+For `-Model`, `-Language`, `-Device`, `-ComputeType`, `-AlignModel`, `-MinSpeakers` and `-MaxSpeakers`:
 
 | Order | Source |
 |---|---|
@@ -81,17 +81,18 @@ Accepted names come from faster-whisper 1.2.1, which is installed by `whisperx==
 | Default | empty (auto-detect) |
 | Default from | `pipeline.language` |
 | Passed to | `transcribe.py --language`, only when not empty |
-| Accepted values | A language code (not a language name) that has a default alignment model: `ar`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`, `eu`, `fa`, `fi`, `fr`, `gl`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ka`, `ko`, `lv`, `ml`, `nl`, `nn`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`, `te`, `tl`, `tr`, `uk`, `ur`, `vi`, `zh` |
+| Accepted values | A language code (not a language name). Without `-AlignModel`, only codes that have a default alignment model: `ar`, `ca`, `cs`, `da`, `de`, `el`, `en`, `es`, `eu`, `fa`, `fi`, `fr`, `gl`, `he`, `hi`, `hr`, `hu`, `id`, `it`, `ja`, `ka`, `ko`, `lv`, `ml`, `nl`, `nn`, `no`, `pl`, `pt`, `ro`, `ru`, `sk`, `sl`, `sv`, `te`, `tl`, `tr`, `uk`, `ur`, `vi`, `zh` |
 
 | Value | Behavior |
 |---|---|
 | Empty | Whisper detects the language from the first 30 seconds of audio and logs `Detected language: <code> (<probability>) in first 30s of audio`. |
 | Supported code | Detection is skipped and the code is used for transcription and alignment. |
 | Language name, for example `english` | Stage 1 fails with `'english' is not a valid language code`. |
-| Whisper language without an alignment model, for example `sw` | Stage 1 succeeds. Stage 2 then fails with `No default align-model for language: sw`. |
+| Whisper language without a default alignment model, for example `bn` | Stage 1 succeeds. Stage 2 fails with `ERROR: Could not load an alignment model for language 'bn'.` unless `-AlignModel` is set. |
 
 Whisper transcribes 100 languages, and WhisperX 3.8.6 has default alignment models for the 41
-codes listed above. Because the pipeline always runs alignment, only those 41 complete the pipeline.
+codes listed above. Because the pipeline always runs alignment, any other language needs
+`-AlignModel`.
 
 Stage 1 logs `No language specified, language will be detected for each audio file` while the
 model loads, whatever `-Language` says, because the value is applied after that point. The line
@@ -138,6 +139,27 @@ not enough free RAM for that model size, with `RuntimeError: mkl_malloc: failed 
 
 ```powershell
 .\02-Transcription-Pipeline\run_pipeline.ps1 "interview.wav" -ComputeType float32
+```
+
+### `-AlignModel`
+
+| | |
+|---|---|
+| Type | string |
+| Default | empty (the WhisperX default for the language) |
+| Default from | `pipeline.alignModel` |
+| Passed to | `align_and_merge.py --align-model`, only when not empty |
+| Accepted values | A Hugging Face model ID of a wav2vec2 CTC model fine-tuned on the audio's language, or a torchaudio pipeline name |
+
+The alignment model used in stage 2. It is required for languages that have no default
+alignment model (see [`-Language`](#-language)). It replaces the default for languages that do
+have one. The model is downloaded on first use to the Hugging Face cache.
+
+The model's vocabulary must cover the script Whisper writes for that language. Characters the
+model does not know get no word timing, and words without timings get no speaker.
+
+```powershell
+.\02-Transcription-Pipeline\run_pipeline.ps1 "call.m4a" -Language bn -AlignModel arijitx/wav2vec2-xls-r-300m-bengali
 ```
 
 ### `-MinSpeakers`

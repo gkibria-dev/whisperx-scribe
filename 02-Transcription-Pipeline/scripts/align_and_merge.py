@@ -24,6 +24,14 @@ def parse_args() -> argparse.Namespace:
         help="Inference device, e.g. cpu or cuda (default: cpu).",
     )
     parser.add_argument(
+        "--align-model", default=None,
+        help=(
+            "Hugging Face wav2vec2 CTC model or torchaudio pipeline name. "
+            "Required for languages without a WhisperX default, e.g. bn "
+            "(default: the WhisperX default for the language)."
+        ),
+    )
+    parser.add_argument(
         "--output", type=Path, default=None,
         help="Output JSON path. Defaults to <stem>_aligned.json.",
     )
@@ -66,11 +74,30 @@ def main() -> int:
         print("ERROR: Raw transcription does not contain a language code.", file=sys.stderr)
         return 1
 
-    print(f"Loading alignment model for language: {language}...")
-    model_a, metadata = whisperx.load_align_model(
-        language_code=language,
-        device=args.device,
-    )
+    model_label = args.align_model or "WhisperX default"
+    print(f"Loading alignment model for language: {language} ({model_label})...")
+    try:
+        model_a, metadata = whisperx.load_align_model(
+            language_code=language,
+            device=args.device,
+            model_name=args.align_model,
+        )
+    except ValueError as error:
+        print(f"ERROR: Could not load an alignment model for language '{language}'.", file=sys.stderr)
+        print(f"       {error}", file=sys.stderr)
+        if args.align_model:
+            print(
+                "       Check the model name and that Hugging Face can be reached.",
+                file=sys.stderr,
+            )
+        else:
+            print(
+                "       WhisperX has no default alignment model for this language. Pass a\n"
+                "       wav2vec2 CTC model fine-tuned on it with --align-model\n"
+                "       (run_pipeline.ps1 -AlignModel, or pipeline.alignModel in settings).",
+                file=sys.stderr,
+            )
+        return 1
 
     print("Performing alignment...")
     aligned = whisperx.align(

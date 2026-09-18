@@ -58,6 +58,7 @@ In JSON, backslashes are escaped: `"E:\\envs\\whisperx"`.
     "device": "cpu",
     "computeType": "int8",
     "language": "",
+    "alignModel": "",
     "minSpeakers": null,
     "maxSpeakers": null
   },
@@ -142,6 +143,18 @@ The interpreter used to create the environment. It is not used to run the pipeli
 | Read by | `run_pipeline.ps1` |
 | Overridden by | `run_pipeline.ps1 -Language` |
 | Accepted values | `""`, or a language code listed in [run-pipeline.md](run-pipeline.md#-language) |
+
+### `pipeline.alignModel`
+
+| | |
+|---|---|
+| Type | string |
+| Default | `""` (the WhisperX default for the language) |
+| Read by | `run_pipeline.ps1` |
+| Overridden by | `run_pipeline.ps1 -AlignModel` |
+| Accepted values | `""`, or a model name described in [run-pipeline.md](run-pipeline.md#-alignmodel) |
+
+Applies to every run, whatever the language. Set it together with `pipeline.language`.
 
 ### `pipeline.minSpeakers`
 

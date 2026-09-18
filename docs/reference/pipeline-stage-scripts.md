@@ -89,11 +89,11 @@ The language used, whether given or detected, is written to the `language` key o
 
 ## `align_and_merge.py`
 
-Stage 2. Loads the default wav2vec2 alignment model for the transcript's language and adds
-word-level timings.
+Stage 2. Loads a wav2vec2 alignment model for the transcript's language and adds word-level
+timings. By default this is the WhisperX default model for the language.
 
 ```text
-python align_and_merge.py <audio> <raw_json> [--device DEVICE] [--output OUTPUT]
+python align_and_merge.py <audio> <raw_json> [--device DEVICE] [--align-model ALIGN_MODEL] [--output OUTPUT]
 ```
 
 | Alignment models | Source |
@@ -117,7 +117,7 @@ python align_and_merge.py <audio> <raw_json> [--device DEVICE] [--output OUTPUT]
 | Kind | positional, required |
 | Type | path |
 | Accepted values | A stage 1 output file containing `segments` and a non-empty `language` |
-| Errors | `ERROR: Raw transcription not found: <path>`, `ERROR: Raw transcription does not contain a language code.`, `ValueError: No default align-model for language: <code>` |
+| Errors | `ERROR: Raw transcription not found: <path>`, `ERROR: Raw transcription does not contain a language code.` |
 
 ### `--device`
 
@@ -126,6 +126,18 @@ python align_and_merge.py <audio> <raw_json> [--device DEVICE] [--output OUTPUT]
 | Type | string |
 | Default | `cpu` |
 | Accepted values | `cpu`, `cuda` |
+
+### `--align-model`
+
+| | |
+|---|---|
+| Type | string |
+| Default | not set (the WhisperX default for the language) |
+| Accepted values | A Hugging Face wav2vec2 CTC model ID, or a torchaudio pipeline name |
+| Required when | The language has no default alignment model, for example `bn` |
+| Error | `ERROR: Could not load an alignment model for language '<code>'.`, followed by the WhisperX reason. Exit code 1. |
+
+The same error appears when the named model cannot be downloaded or found.
 
 ### `--output`
 

@@ -7,6 +7,7 @@ param(
     [string]$Language = "",
     [string]$Device = "",
     [string]$ComputeType = "",
+    [string]$AlignModel = "",
 
     [Nullable[int]]$MinSpeakers = $null,
     [Nullable[int]]$MaxSpeakers = $null,
@@ -33,6 +34,7 @@ if ([string]::IsNullOrWhiteSpace($Model)) { $Model = $Settings.pipeline.model }
 if ([string]::IsNullOrWhiteSpace($Device)) { $Device = $Settings.pipeline.device }
 if ([string]::IsNullOrWhiteSpace($ComputeType)) { $ComputeType = $Settings.pipeline.computeType }
 if ([string]::IsNullOrWhiteSpace($Language)) { $Language = [string]$Settings.pipeline.language }
+if ([string]::IsNullOrWhiteSpace($AlignModel)) { $AlignModel = [string]$Settings.pipeline.alignModel }
 
 if (-not $MinSpeakers.HasValue -and $null -ne $Settings.pipeline.minSpeakers) {
     $MinSpeakers = [int]$Settings.pipeline.minSpeakers
@@ -172,12 +174,18 @@ try {
 
     Invoke-PythonScript "transcribe.py" $TranscribeArgs
 
-    Invoke-PythonScript "align_and_merge.py" @(
+    $AlignArgs = @(
         $AudioPath,
         $Raw,
         "--device", $Device,
         "--output", $Aligned
     )
+
+    if (-not [string]::IsNullOrWhiteSpace($AlignModel)) {
+        $AlignArgs += @("--align-model", $AlignModel)
+    }
+
+    Invoke-PythonScript "align_and_merge.py" $AlignArgs
 
     $DiarizeArgs = @(
         $AudioPath,

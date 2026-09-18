@@ -29,6 +29,7 @@ function Get-DefaultProjectSettings {
             device      = 'cpu'
             computeType = 'int8'
             language    = ''
+            alignModel  = ''
             minSpeakers = $null
             maxSpeakers = $null
         }
