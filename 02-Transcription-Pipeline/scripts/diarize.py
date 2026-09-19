@@ -15,10 +15,51 @@ import getpass
 import json
 import os
 import sys
+import time
 from pathlib import Path
+from typing import Callable
 
 import whisperx
 from whisperx.diarize import DiarizationPipeline
+
+_PROGRESS_MIN_PCT_DELTA = 5.0
+_PROGRESS_MIN_INTERVAL_SECS = 15.0
+
+
+def _fmt_duration(seconds: float) -> str:
+    total = max(0, int(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m{secs:02d}s"
+    if minutes:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
+
+
+def _make_progress_printer(label: str) -> Callable[[float], None]:
+    start = time.monotonic()
+    state = {"last_pct": -1.0, "last_time": start}
+
+    def _progress_callback(pct: float) -> None:
+        now = time.monotonic()
+        elapsed = now - start
+        is_first = state["last_pct"] < 0.0
+        is_last = pct >= 100.0
+        delta_ok = (pct - state["last_pct"]) >= _PROGRESS_MIN_PCT_DELTA
+        interval_ok = (now - state["last_time"]) >= _PROGRESS_MIN_INTERVAL_SECS
+        if not (is_first or is_last or delta_ok or interval_ok):
+            return
+        eta = elapsed * (100.0 - pct) / pct if pct > 0.0 else 0.0
+        phase = " [segmentation]" if pct < 50.0 else " [embeddings]"
+        print(
+            f"{label}: {pct:.0f}%{phase} (elapsed {_fmt_duration(elapsed)}, ETA {_fmt_duration(eta)})",
+            flush=True,
+        )
+        state["last_pct"] = pct
+        state["last_time"] = now
+
+    return _progress_callback
 
 
 def parse_args() -> argparse.Namespace:
@@ -175,13 +216,15 @@ def main() -> int:
         device=args.device,
     )
 
-    diarization_kwargs: dict[str, int] = {}
+    diarization_kwargs: dict[str, int | Callable[[float], None]] = {}
 
     if args.min_speakers is not None:
         diarization_kwargs["min_speakers"] = args.min_speakers
 
     if args.max_speakers is not None:
         diarization_kwargs["max_speakers"] = args.max_speakers
+
+    diarization_kwargs["progress_callback"] = _make_progress_printer("Diarize")
 
     print("Running speaker diarization...")
     diarize_segments = diarize_model(

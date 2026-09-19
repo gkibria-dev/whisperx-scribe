@@ -1,7 +1,18 @@
 # Progress reporting for the transcription pipeline
 
-**Status:** In progress. Plan approved; implementation underway on
-`feature/pipeline-progress-reporting`.
+**Status:** Implemented. All six planned files were changed on
+`feature/pipeline-progress-reporting`. `tests/test-settings.ps1` and `tests/test-docs.ps1`
+both pass. `tests/test-pipeline.ps1` currently fails on this machine for an unrelated
+reason — the venv's Python cannot complete a TLS handshake with `huggingface.co`
+(`SSLCertVerificationError: unable to get local issuer certificate`), reproduced even with
+a bare `requests.get()` outside of any pipeline code, so it predates this change. Verified
+the actual feature instead by running `run_pipeline.ps1` directly against
+`tests/data/sample-2-speakers.wav` with `HF_HUB_OFFLINE=1` (all three models were already
+cached locally): real `Transcribe:`/`Align:`/`Diarize:` percentage lines appeared with
+correct elapsed/ETA formatting, `Diarize:` correctly tagged `[segmentation]`/`[embeddings]`,
+and `run_pipeline.ps1` printed a `--- <script>.py completed in <duration> ---` line after
+every stage plus a final `Total time: <duration>` line. The SSL issue in the venv is a
+separate, pre-existing environment problem and was not fixed as part of this change.
 
 ## Context
 

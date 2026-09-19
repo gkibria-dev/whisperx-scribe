@@ -21,7 +21,7 @@ File contents are described in [output-files.md](output-files.md).
 | Interpreter | `<environment.venvPath>\Scripts\python.exe`. Stages 1–3 import `whisperx`, and `finalize.py` uses only the standard library. |
 | Exit code | `0` on success. `1` on a validation error or an unhandled exception, which prints a Python traceback. |
 | Errors | Written to stderr, prefixed `ERROR:` |
-| Progress | Written to stdout |
+| Progress | `transcribe.py`, `align_and_merge.py`, and `diarize.py` print `<Stage>: NN% (elapsed <duration>, ETA <duration>)` lines to stdout as work proceeds (`diarize.py` additionally tags each line `[segmentation]` or `[embeddings]`). Lines are throttled to at most one per 5 percentage points or 15 seconds, except the first update and the final 100% update, which always print. `finalize.py` prints no percentage progress (it completes in well under a second). |
 | Paths | `~` is expanded, and relative paths are resolved against the current working directory |
 | Output directory | Created if it does not exist |
 | Existing output | Overwritten |
