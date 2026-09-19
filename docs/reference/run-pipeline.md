@@ -247,7 +247,9 @@ An empty prompt answer stops the run with `No Hugging Face token was supplied.`
 |---|---|
 | `WhisperX Scribe Pipeline`, `Audio:`, `Environment:`, `Output:` | Start of the run |
 | `=== <script>.py ===` | Before each stage |
-| `=== Pipeline complete ===` followed by the four output paths | After the last stage |
+| `<Stage>: NN% (elapsed <duration>, ETA <duration>)` | During `transcribe.py`, `align_and_merge.py`, and `diarize.py` (see [pipeline-stage-scripts.md](pipeline-stage-scripts.md#common-behavior)) |
+| `--- <script>.py completed in <duration> ---` | After each of the four stages finishes |
+| `=== Pipeline complete ===` followed by total time and the four output paths | After the last stage |
 | `<script>.py failed with exit code <n>.` | A stage failed. Later stages do not run. |
 
 ## Error messages

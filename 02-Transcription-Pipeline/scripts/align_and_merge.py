@@ -8,9 +8,49 @@ from __future__ import annotations
 import argparse
 import json
 import sys
+import time
 from pathlib import Path
+from typing import Callable
 
 import whisperx
+
+_PROGRESS_MIN_PCT_DELTA = 5.0
+_PROGRESS_MIN_INTERVAL_SECS = 15.0
+
+
+def _fmt_duration(seconds: float) -> str:
+    total = max(0, int(seconds))
+    hours, remainder = divmod(total, 3600)
+    minutes, secs = divmod(remainder, 60)
+    if hours:
+        return f"{hours}h{minutes:02d}m{secs:02d}s"
+    if minutes:
+        return f"{minutes}m{secs:02d}s"
+    return f"{secs}s"
+
+
+def _make_progress_printer(label: str) -> Callable[[float], None]:
+    start = time.monotonic()
+    state = {"last_pct": -1.0, "last_time": start}
+
+    def _progress_callback(pct: float) -> None:
+        now = time.monotonic()
+        elapsed = now - start
+        is_first = state["last_pct"] < 0.0
+        is_last = pct >= 100.0
+        delta_ok = (pct - state["last_pct"]) >= _PROGRESS_MIN_PCT_DELTA
+        interval_ok = (now - state["last_time"]) >= _PROGRESS_MIN_INTERVAL_SECS
+        if not (is_first or is_last or delta_ok or interval_ok):
+            return
+        eta = elapsed * (100.0 - pct) / pct if pct > 0.0 else 0.0
+        print(
+            f"{label}: {pct:.0f}% (elapsed {_fmt_duration(elapsed)}, ETA {_fmt_duration(eta)})",
+            flush=True,
+        )
+        state["last_pct"] = pct
+        state["last_time"] = now
+
+    return _progress_callback
 
 
 def parse_args() -> argparse.Namespace:
@@ -100,6 +140,7 @@ def main() -> int:
         return 1
 
     print("Performing alignment...")
+    progress_cb = _make_progress_printer("Align")
     aligned = whisperx.align(
         result["segments"],
         model_a,
@@ -107,6 +148,7 @@ def main() -> int:
         audio,
         args.device,
         return_char_alignments=False,
+        progress_callback=progress_cb,
     )
 
     with output_file.open("w", encoding="utf-8") as handle:

@@ -21,6 +21,21 @@ param(
 
 $ErrorActionPreference = "Stop"
 
+$PipelineStart = Get-Date
+
+function Format-Duration {
+    param([TimeSpan]$TimeSpan)
+    if ($TimeSpan.TotalHours -ge 1) {
+        return "{0}h{1:D2}m{2:D2}s" -f [int]$TimeSpan.TotalHours, $TimeSpan.Minutes, $TimeSpan.Seconds
+    }
+    elseif ($TimeSpan.TotalMinutes -ge 1) {
+        return "{0}m{1:D2}s" -f [int]$TimeSpan.TotalMinutes, $TimeSpan.Seconds
+    }
+    else {
+        return "{0}s" -f [int]$TimeSpan.TotalSeconds
+    }
+}
+
 # Repository root is the parent of 02-Transcription-Pipeline.
 $RepoRoot = Split-Path -Parent $PSScriptRoot
 $Scripts = Join-Path $PSScriptRoot "scripts"
@@ -139,11 +154,15 @@ function Invoke-PythonScript {
     Write-Host ""
     Write-Host "=== $ScriptName ===" -ForegroundColor Cyan
 
+    $StageStart = Get-Date
     & $Python $ScriptPath @Arguments
 
     if ($LASTEXITCODE -ne 0) {
         throw "$ScriptName failed with exit code $LASTEXITCODE."
     }
+
+    $StageElapsed = Format-Duration ((Get-Date) - $StageStart)
+    Write-Host "--- $ScriptName completed in $StageElapsed ---" -ForegroundColor Cyan
 }
 
 $Stem = [System.IO.Path]::GetFileNameWithoutExtension($AudioFile.Name)
@@ -211,6 +230,7 @@ try {
 
     Write-Host ""
     Write-Host "=== Pipeline complete ===" -ForegroundColor Green
+    Write-Host "Total time: $(Format-Duration ((Get-Date) - $PipelineStart))" -ForegroundColor Green
     Write-Host "Raw:       $Raw"
     Write-Host "Aligned:   $Aligned"
     Write-Host "Diarized:  $Diarized"
