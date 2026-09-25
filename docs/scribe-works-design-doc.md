@@ -553,8 +553,8 @@ each task from E. Step G is how the very first session actually begins.
 1. Create a new **private** repository — matches this being a single-operator tool (NFR2), and
    there's no reason to expose infrastructure/cost-control code publicly.
 2. Name: `scribe-works` (decided, §5 item 10).
-3. Description: a one-line summary, e.g. *"On-demand cloud-GPU transcription works for WhisperX
-   — async job queue, cost/speed tunable, AWS/Azure."*
+3. Description (as used): *"Scribe Works: on-demand cloud-GPU transcription for WhisperX. Async job
+   queue, autoscaled workers, tunable cost and speed."*
 4. Default branch: `main`.
 5. `.gitignore` / license: skip both for now. A `.gitignore` template only makes sense once the
    language/framework choices in §5 (items 2–4, 7) are made — adding one prematurely risks
